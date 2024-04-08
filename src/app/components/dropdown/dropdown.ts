@@ -1106,15 +1106,18 @@ export class Dropdown implements OnInit, AfterViewInit, AfterContentInit, AfterV
     }
 
     autoUpdateModel() {
-        if (this.selectOnFocus && this.autoOptionFocus && !this.hasSelectedOption()) {
+        const hasNoSelectedOption = !this.hasSelectedOption();
+        const shouldAutoFocus = this.selectOnFocus && this.autoOptionFocus && hasNoSelectedOption;
+        if (shouldAutoFocus) {
             this.focusedOptionIndex.set(this.findFirstFocusedOptionIndex());
             this.onOptionSelect(null, this.visibleOptions()[this.focusedOptionIndex()], false);
         }
-        if (this.autoDisplayFirst && (this.modelValue() === null || this.modelValue() === undefined)) {
-            if (!this.placeholder()) {
-                const ind = this.findFirstOptionIndex();
-                this.onOptionSelect(null, this.visibleOptions()[ind], false, true);
-            }
+
+        const modelValueIsNullOrUndefined = this.modelValue() === null || this.modelValue() === undefined;
+        const shouldAutoDisplayFirst = this.autoDisplayFirst && modelValueIsNullOrUndefined;
+        if (shouldAutoDisplayFirst && !this.placeholder()) {
+            const ind = this.findFirstOptionIndex();
+            this.onOptionSelect(null, this.visibleOptions()[ind], false, true);
         }
     }
 
@@ -1198,11 +1201,11 @@ export class Dropdown implements OnInit, AfterViewInit, AfterContentInit, AfterV
     }
 
     isOptionDisabled(option: any) {
-        if (this.getOptionValue(this.modelValue()) === this.getOptionValue(option) || (this.getOptionLabel(this.modelValue() === this.getOptionLabel(option)) && option.disabled === false)) {
-            return false;
-        } else {
-            return this.optionDisabled ? ObjectUtils.resolveFieldData(option, this.optionDisabled) : option && option.disabled !== undefined ? option.disabled : false;
-        }
+        const isOptionValueEqualToModelValue = this.getOptionValue(this.modelValue()) === this.getOptionValue(option);
+        const isOptionLabelEqualToModelLabel = this.getOptionLabel(this.modelValue()) === this.getOptionLabel(option);
+        const isOptionDisabled = this.optionDisabled ? ObjectUtils.resolveFieldData(option, this.optionDisabled) : option && option.disabled !== undefined ? option.disabled : false;
+
+        return !(isOptionValueEqualToModelValue || (isOptionLabelEqualToModelLabel && !isOptionDisabled));
     }
 
     getOptionGroupLabel(optionGroup: any) {
@@ -1258,16 +1261,35 @@ export class Dropdown implements OnInit, AfterViewInit, AfterContentInit, AfterV
             return;
         }
 
-        this.focusInputViewChild?.nativeElement.focus({ preventScroll: true });
+        const isInputOrClearIcon = this.isInputOrClearIcon(event);
+        const isOutsideOverlay = this.isOutsideOverlay(event);
 
-        if (event.target.tagName === 'INPUT' || event.target.getAttribute('data-pc-section') === 'clearicon' || event.target.closest('[data-pc-section="clearicon"]')) {
-            return;
-        } else if (!this.overlayViewChild || !this.overlayViewChild.el.nativeElement.contains(event.target)) {
-            this.overlayVisible ? this.hide(true) : this.show(true);
-        }
+        this.toggleOverlay(isInputOrClearIcon, isOutsideOverlay);
+        this.focusInput(isInputOrClearIcon);
+
         this.onClick.emit(event);
         this.clicked.set(true);
         this.cd.detectChanges();
+    }
+
+    private isInputOrClearIcon(event: any): boolean {
+        return event.target.tagName === 'INPUT' || event.target.getAttribute('data-pc-section') === 'clearicon' || event.target.closest('[data-pc-section="clearicon"]');
+    }
+
+    private isOutsideOverlay(event: any): boolean {
+        return !this.overlayViewChild || !this.overlayViewChild.el.nativeElement.contains(event.target);
+    }
+
+    private toggleOverlay(isInputOrClearIcon: boolean, isOutsideOverlay: boolean): void {
+        if (!isInputOrClearIcon && isOutsideOverlay) {
+            this.overlayVisible ? this.hide(true) : this.show(true);
+        }
+    }
+
+    private focusInput(isInputOrClearIcon: boolean): void {
+        if (!isInputOrClearIcon) {
+            this.focusInputViewChild?.nativeElement.focus({ preventScroll: true });
+        }
     }
 
     isEmpty() {
@@ -1306,38 +1328,63 @@ export class Dropdown implements OnInit, AfterViewInit, AfterContentInit, AfterV
 
     onOverlayAnimationStart(event: AnimationEvent) {
         if (event.toState === 'visible') {
-            this.itemsWrapper = DomHandler.findSingle(this.overlayViewChild?.overlayViewChild?.nativeElement, this.virtualScroll ? '.p-scroller' : '.p-dropdown-items-wrapper');
-            this.virtualScroll && this.scroller?.setContentEl(this.itemsViewChild?.nativeElement);
-
-            if (this.options && this.options.length) {
-                if (this.virtualScroll) {
-                    const selectedIndex = this.modelValue() ? this.focusedOptionIndex() : -1;
-                    if (selectedIndex !== -1) {
-                        this.scroller?.scrollToIndex(selectedIndex);
-                    }
-                } else {
-                    let selectedListItem = DomHandler.findSingle(this.itemsWrapper, '.p-dropdown-item.p-highlight');
-
-                    if (selectedListItem) {
-                        selectedListItem.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-                    }
-                }
-            }
-
-            if (this.filterViewChild && this.filterViewChild.nativeElement) {
-                this.preventModelTouched = true;
-
-                if (this.autofocusFilter && !this.editable) {
-                    this.filterViewChild.nativeElement.focus();
-                }
-            }
-
-            this.onShow.emit(event);
+            this.handleVisibleState();
+        } else if (event.toState === 'void') {
+            this.handleVoidState(event);
         }
-        if (event.toState === 'void') {
-            this.itemsWrapper = null;
-            this.onModelTouched();
-            this.onHide.emit(event);
+    }
+
+    private handleVisibleState() {
+        const overlayViewChildElement = this.overlayViewChild?.overlayViewChild?.nativeElement;
+        const selector = this.virtualScroll ? '.p-scroller' : '.p-dropdown-items-wrapper';
+        this.itemsWrapper = DomHandler.findSingle(overlayViewChildElement, selector);
+
+        if (this.virtualScroll) {
+            this.handleVirtualScrolling();
+        }
+
+        if (this.options && this.options.length) {
+            this.handleOptionScrolling();
+        }
+
+        this.handleFilterFocus();
+        this.emitShowEvent();
+    }
+
+    private handleVirtualScrolling() {
+        this.scroller?.setContentEl(this.itemsViewChild?.nativeElement);
+    }
+
+    private emitShowEvent() {
+        this.onShow.emit();
+    }
+
+    private handleVoidState(event: AnimationEvent) {
+        this.itemsWrapper = null;
+        this.onModelTouched();
+        this.onHide.emit(event);
+    }
+
+    private handleOptionScrolling() {
+        if (this.virtualScroll) {
+            const selectedIndex = this.modelValue() ? this.focusedOptionIndex() : -1;
+            if (selectedIndex !== -1) {
+                this.scroller?.scrollToIndex(selectedIndex);
+            }
+        } else {
+            const selectedListItem = DomHandler.findSingle(this.itemsWrapper, '.p-dropdown-item.p-highlight');
+            if (selectedListItem) {
+                selectedListItem.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            }
+        }
+    }
+
+    private handleFilterFocus() {
+        if (this.filterViewChild && this.filterViewChild.nativeElement) {
+            this.preventModelTouched = true;
+            if (this.autofocusFilter && !this.editable) {
+                this.filterViewChild.nativeElement.focus();
+            }
         }
     }
     /**
@@ -1393,121 +1440,60 @@ export class Dropdown implements OnInit, AfterViewInit, AfterContentInit, AfterV
             return;
         }
 
-        switch (event.code) {
-            //down
-            case 'ArrowDown':
-                this.onArrowDownKey(event);
-                break;
+        const handleArrowKey = (key: string, handler: (event: KeyboardEvent) => void) => {
+            if (event.code === key) {
+                handler(event);
+            }
+        };
 
-            //up
-            case 'ArrowUp':
-                this.onArrowUpKey(event, this.editable);
-                break;
+        const handleEditableKey = (key: string, handler: (event: KeyboardEvent) => void) => {
+            if (event.code === key && this.editable) {
+                handler(event);
+            }
+        };
 
-            case 'ArrowLeft':
-            case 'ArrowRight':
-                this.onArrowLeftKey(event, this.editable);
-                break;
+        handleArrowKey('ArrowDown', this.onArrowDownKey.bind(this));
+        handleArrowKey('ArrowUp', this.onArrowUpKey.bind(this, this.editable));
+        handleEditableKey('ArrowLeft', this.onArrowLeftKey.bind(this, event));
+        handleEditableKey('ArrowRight', this.onArrowLeftKey.bind(this, event));
+        handleArrowKey('Delete', this.onDeleteKey.bind(this));
+        handleEditableKey('Home', this.onHomeKey.bind(this, event));
+        handleEditableKey('End', this.onEndKey.bind(this, event));
+        handleArrowKey('PageDown', this.onPageDownKey.bind(this));
+        handleArrowKey('PageUp', this.onPageUpKey.bind(this));
+        handleArrowKey('Space', this.onSpaceKey.bind(this, event, search));
+        handleArrowKey('Enter', this.onEnterKey.bind(this));
+        handleArrowKey('NumpadEnter', this.onEnterKey.bind(this));
+        handleArrowKey('Escape', this.onEscapeKey.bind(this));
+        handleArrowKey('Tab', this.onTabKey.bind(this));
+        handleEditableKey('Backspace', this.onBackspaceKey.bind(this, event));
 
-            case 'Delete':
-                this.onDeleteKey(event);
-                break;
-
-            case 'Home':
-                this.onHomeKey(event, this.editable);
-                break;
-
-            case 'End':
-                this.onEndKey(event, this.editable);
-                break;
-
-            case 'PageDown':
-                this.onPageDownKey(event);
-                break;
-
-            case 'PageUp':
-                this.onPageUpKey(event);
-                break;
-
-            //space
-            case 'Space':
-                this.onSpaceKey(event, search);
-                break;
-
-            //enter
-            case 'Enter':
-            case 'NumpadEnter':
-                this.onEnterKey(event);
-                break;
-
-            //escape and tab
-            case 'Escape':
-                this.onEscapeKey(event);
-                break;
-
-            case 'Tab':
-                this.onTabKey(event);
-                break;
-
-            case 'Backspace':
-                this.onBackspaceKey(event, this.editable);
-                break;
-
-            case 'ShiftLeft':
-            case 'ShiftRight':
-                //NOOP
-                break;
-
-            default:
-                if (!event.metaKey && ObjectUtils.isPrintableCharacter(event.key)) {
-                    !this.overlayVisible && this.show();
-                    !this.editable && this.searchOptions(event, event.key);
-                }
-
-                break;
+        if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
+            // NOOP
+        } else if (!event.metaKey && ObjectUtils.isPrintableCharacter(event.key)) {
+            !this.overlayVisible && this.show();
+            !this.editable && this.searchOptions(event, event.key);
         }
 
         this.clicked.set(false);
     }
 
     onFilterKeyDown(event) {
-        switch (event.code) {
-            case 'ArrowDown':
-                this.onArrowDownKey(event);
-                break;
+        const handleArrowKey = (key: string, handler: (event: KeyboardEvent) => void) => {
+            if (event.code === key) {
+                handler(event);
+            }
+        };
 
-            case 'ArrowUp':
-                this.onArrowUpKey(event, true);
-                break;
-
-            case 'ArrowLeft':
-            case 'ArrowRight':
-                this.onArrowLeftKey(event, true);
-                break;
-
-            case 'Home':
-                this.onHomeKey(event, true);
-                break;
-
-            case 'End':
-                this.onEndKey(event, true);
-                break;
-
-            case 'Enter':
-                this.onEnterKey(event, true);
-                break;
-
-            case 'Escape':
-                this.onEscapeKey(event);
-                break;
-
-            case 'Tab':
-                this.onTabKey(event, true);
-                break;
-
-            default:
-                break;
-        }
+        handleArrowKey('ArrowDown', this.onArrowDownKey.bind(this));
+        handleArrowKey('ArrowUp', this.onArrowUpKey.bind(this, true));
+        handleArrowKey('ArrowLeft', this.onArrowLeftKey.bind(this, event, true));
+        handleArrowKey('ArrowRight', this.onArrowLeftKey.bind(this, event, true));
+        handleArrowKey('Home', this.onHomeKey.bind(this, event, true));
+        handleArrowKey('End', this.onEndKey.bind(this, event, true));
+        handleArrowKey('Enter', this.onEnterKey.bind(this, event, true));
+        handleArrowKey('Escape', this.onEscapeKey.bind(this));
+        handleArrowKey('Tab', this.onTabKey.bind(this, event, true));
     }
 
     onFilterBlur(event) {
@@ -1548,17 +1534,26 @@ export class Dropdown implements OnInit, AfterViewInit, AfterContentInit, AfterV
 
     scrollInView(index = -1) {
         const id = index !== -1 ? `${this.id}_${index}` : this.focusedOptionId;
+        const element = this.getElementToScrollIntoView(id);
 
-        if (this.itemsViewChild && this.itemsViewChild.nativeElement) {
-            const element = DomHandler.findSingle(this.itemsViewChild.nativeElement, `li[id="${id}"]`);
-            if (element) {
-                element.scrollIntoView && element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-            } else if (!this.virtualScrollerDisabled) {
-                setTimeout(() => {
-                    this.virtualScroll && this.scroller?.scrollToIndex(index !== -1 ? index : this.focusedOptionIndex());
-                }, 0);
-            }
+        if (element) {
+            element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        } else if (!this.virtualScrollerDisabled) {
+            this.scrollVirtualElement(index);
         }
+    }
+
+    private getElementToScrollIntoView(id: string) {
+        if (this.itemsViewChild && this.itemsViewChild.nativeElement) {
+            return DomHandler.findSingle(this.itemsViewChild.nativeElement, `li[id="${id}"]`);
+        }
+        return null;
+    }
+
+    private scrollVirtualElement(index: number) {
+        setTimeout(() => {
+            this.virtualScroll && this.scroller?.scrollToIndex(index !== -1 ? index : this.focusedOptionIndex());
+        }, 0);
     }
 
     hasSelectedOption() {
@@ -1727,13 +1722,12 @@ export class Dropdown implements OnInit, AfterViewInit, AfterContentInit, AfterV
     onTabKey(event, pressedInInputText = false) {
         if (!pressedInInputText) {
             if (this.overlayVisible && this.hasFocusableElements()) {
-                DomHandler.focus(event.shiftKey ? this.lastHiddenFocusableElementOnOverlay.nativeElement : this.firstHiddenFocusableElementOnOverlay.nativeElement);
+                const focusableElement = event.shiftKey ? this.lastHiddenFocusableElementOnOverlay.nativeElement : this.firstHiddenFocusableElementOnOverlay.nativeElement;
+                DomHandler.focus(focusableElement);
                 event.preventDefault();
-            } else {
-                if (this.focusedOptionIndex() !== -1 && this.overlayVisible) {
-                    const option = this.visibleOptions()[this.focusedOptionIndex()];
-                    this.onOptionSelect(event, option);
-                }
+            } else if (this.focusedOptionIndex() !== -1 && this.overlayVisible) {
+                const option = this.visibleOptions()[this.focusedOptionIndex()];
+                this.onOptionSelect(event, option);
                 this.overlayVisible && this.hide(this.filter);
             }
         }
@@ -1768,30 +1762,26 @@ export class Dropdown implements OnInit, AfterViewInit, AfterContentInit, AfterV
     }
 
     searchOptions(event, char) {
-        this.searchValue = (this.searchValue || '') + char;
-
+        const searchValue = (this.searchValue || '') + char;
         let optionIndex = -1;
         let matched = false;
 
+        const visibleOptions = this.visibleOptions();
         if (this.focusedOptionIndex() !== -1) {
-            optionIndex = this.visibleOptions()
-                .slice(this.focusedOptionIndex())
-                .findIndex((option) => this.isOptionMatched(option));
-            optionIndex =
-                optionIndex === -1
-                    ? this.visibleOptions()
-                          .slice(0, this.focusedOptionIndex())
-                          .findIndex((option) => this.isOptionMatched(option))
-                    : optionIndex + this.focusedOptionIndex();
+            const focusedIndex = this.focusedOptionIndex();
+            optionIndex = visibleOptions.slice(focusedIndex).findIndex((option) => this.isOptionMatched(option));
+            if (optionIndex === -1) {
+                optionIndex = visibleOptions.slice(0, focusedIndex).findIndex((option) => this.isOptionMatched(option));
+            } else {
+                optionIndex += focusedIndex;
+            }
         } else {
-            optionIndex = this.visibleOptions().findIndex((option) => this.isOptionMatched(option));
+            optionIndex = visibleOptions.findIndex((option) => this.isOptionMatched(option).toString());
         }
 
         if (optionIndex !== -1) {
             matched = true;
-        }
-
-        if (optionIndex === -1 && this.focusedOptionIndex() === -1) {
+        } else if (this.focusedOptionIndex() === -1) {
             optionIndex = this.findFirstFocusedOptionIndex();
         }
 
@@ -1799,10 +1789,7 @@ export class Dropdown implements OnInit, AfterViewInit, AfterContentInit, AfterV
             this.changeFocusedOptionIndex(event, optionIndex);
         }
 
-        if (this.searchTimeout) {
-            clearTimeout(this.searchTimeout);
-        }
-
+        clearTimeout(this.searchTimeout);
         this.searchTimeout = setTimeout(() => {
             this.searchValue = '';
             this.searchTimeout = null;
