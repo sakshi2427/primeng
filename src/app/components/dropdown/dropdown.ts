@@ -1013,23 +1013,26 @@ export class Dropdown implements OnInit, AfterViewInit, AfterContentInit, AfterV
     ngAfterViewChecked() {
         if (this.optionsChanged && this.overlayVisible) {
             this.optionsChanged = false;
-
-            this.zone.runOutsideAngular(() => {
-                setTimeout(() => {
-                    if (this.overlayViewChild) {
-                        this.overlayViewChild.alignOverlay();
-                    }
-                }, 1);
-            });
+            this.alignOverlay();
         }
 
         if (this.selectedOptionUpdated && this.itemsWrapper) {
-            let selectedItem = DomHandler.findSingle(this.overlayViewChild?.overlayViewChild?.nativeElement, 'li.p-highlight');
+            const selectedItem = DomHandler.findSingle(this.overlayViewChild?.overlayViewChild?.nativeElement, 'li.p-highlight');
             if (selectedItem) {
                 DomHandler.scrollInView(this.itemsWrapper, selectedItem);
             }
             this.selectedOptionUpdated = false;
         }
+    }
+
+    private alignOverlay() {
+        this.zone.runOutsideAngular(() => {
+            setTimeout(() => {
+                if (this.overlayViewChild) {
+                    this.overlayViewChild.alignOverlay();
+                }
+            }, 1);
+        });
     }
 
     ngAfterContentInit() {
