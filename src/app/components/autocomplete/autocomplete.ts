@@ -882,57 +882,24 @@ export class AutoComplete implements AfterViewChecked, AfterContentInit, OnDestr
     }
 
     ngAfterContentInit() {
-        (this.templates as QueryList<PrimeTemplate>).forEach((item) => {
-            switch (item.getType()) {
-                case 'item':
-                    this.itemTemplate = item.template;
-                    break;
+        const templates = this.templates as QueryList<PrimeTemplate>;
+        const itemTemplates: { [key: string]: TemplateRef<any> } = {};
 
-                case 'group':
-                    this.groupTemplate = item.template;
-                    break;
-
-                case 'selectedItem':
-                    this.selectedItemTemplate = item.template;
-                    break;
-
-                case 'header':
-                    this.headerTemplate = item.template;
-                    break;
-
-                case 'empty':
-                    this.emptyTemplate = item.template;
-                    break;
-
-                case 'footer':
-                    this.footerTemplate = item.template;
-                    break;
-
-                case 'loader':
-                    this.loaderTemplate = item.template;
-                    break;
-
-                case 'removetokenicon':
-                    this.removeIconTemplate = item.template;
-                    break;
-
-                case 'loadingicon':
-                    this.loadingIconTemplate = item.template;
-                    break;
-
-                case 'clearicon':
-                    this.clearIconTemplate = item.template;
-                    break;
-
-                case 'dropdownicon':
-                    this.dropdownIconTemplate = item.template;
-                    break;
-
-                default:
-                    this.itemTemplate = item.template;
-                    break;
-            }
+        templates.forEach((item) => {
+            itemTemplates[item.getType()] = item.template;
         });
+
+        this.itemTemplate = itemTemplates['item'] || itemTemplates['default'];
+        this.groupTemplate = itemTemplates['group'];
+        this.selectedItemTemplate = itemTemplates['selectedItem'];
+        this.headerTemplate = itemTemplates['header'];
+        this.emptyTemplate = itemTemplates['empty'];
+        this.footerTemplate = itemTemplates['footer'];
+        this.loaderTemplate = itemTemplates['loader'];
+        this.removeIconTemplate = itemTemplates['removetokenicon'];
+        this.loadingIconTemplate = itemTemplates['loadingicon'];
+        this.clearIconTemplate = itemTemplates['clearicon'];
+        this.dropdownIconTemplate = itemTemplates['dropdownicon'];
     }
 
     handleSuggestionsChange() {
@@ -1037,12 +1004,21 @@ export class AutoComplete implements AfterViewChecked, AfterContentInit, OnDestr
     }
 
     onContainerClick(event) {
-        if (this.disabled || this.loading || this.isInputClicked(event) || this.isDropdownClicked(event)) {
-            return;
-        }
+        const isDisabled = this.disabled;
+        const isLoading = this.loading;
+        const isInputClicked = this.isInputClicked(event);
+        const isDropdownClicked = this.isDropdownClicked(event);
+        const isDisabledOrLoading = isDisabled || isLoading;
+        const isInputOrDropdownClicked = isInputClicked || isDropdownClicked;
 
-        if (!this.overlayViewChild || !this.overlayViewChild.overlayViewChild?.nativeElement.contains(event.target)) {
-            DomHandler.focus(this.inputEL.nativeElement);
+        if (!isDisabledOrLoading && !isInputOrDropdownClicked) {
+            const overlayViewChildExists = this.overlayViewChild && this.overlayViewChild.overlayViewChild?.nativeElement;
+            if (overlayViewChildExists) {
+                const isClickOutsideOverlay = !this.overlayViewChild.overlayViewChild.nativeElement.contains(event.target);
+                if (isClickOutsideOverlay) {
+                    DomHandler.focus(this.inputEL.nativeElement);
+                }
+            }
         }
     }
 
@@ -1187,68 +1163,34 @@ export class AutoComplete implements AfterViewChecked, AfterContentInit, OnDestr
     onKeyDown(event) {
         if (this.disabled) {
             event.preventDefault();
-
             return;
         }
 
-        switch (event.code) {
-            case 'ArrowDown':
-                this.onArrowDownKey(event);
-                break;
+        const handleArrowKey = (key, handler) => {
+            if (event.code === key) {
+                handler(event);
+            }
+        };
 
-            case 'ArrowUp':
-                this.onArrowUpKey(event);
-                break;
+        const handleKey = (key, handler) => {
+            if (event.code === key) {
+                handler(event);
+            }
+        };
 
-            case 'ArrowLeft':
-                this.onArrowLeftKey(event);
-                break;
-
-            case 'ArrowRight':
-                this.onArrowRightKey(event);
-                break;
-
-            case 'Home':
-                this.onHomeKey(event);
-                break;
-
-            case 'End':
-                this.onEndKey(event);
-                break;
-
-            case 'PageDown':
-                this.onPageDownKey(event);
-                break;
-
-            case 'PageUp':
-                this.onPageUpKey(event);
-                break;
-
-            case 'Enter':
-            case 'NumpadEnter':
-                this.onEnterKey(event);
-                break;
-
-            case 'Escape':
-                this.onEscapeKey(event);
-                break;
-
-            case 'Tab':
-                this.onTabKey(event);
-                break;
-
-            case 'Backspace':
-                this.onBackspaceKey(event);
-                break;
-
-            case 'ShiftLeft':
-            case 'ShiftRight':
-                //NOOP
-                break;
-
-            default:
-                break;
-        }
+        handleArrowKey('ArrowDown', this.onArrowDownKey);
+        handleArrowKey('ArrowUp', this.onArrowUpKey);
+        handleArrowKey('ArrowLeft', this.onArrowLeftKey);
+        handleArrowKey('ArrowRight', this.onArrowRightKey);
+        handleKey('Home', this.onHomeKey);
+        handleKey('End', this.onEndKey);
+        handleKey('PageDown', this.onPageDownKey);
+        handleKey('PageUp', this.onPageUpKey);
+        handleKey('Enter', this.onEnterKey);
+        handleKey('NumpadEnter', this.onEnterKey);
+        handleKey('Escape', this.onEscapeKey);
+        handleKey('Tab', this.onTabKey);
+        handleKey('Backspace', this.onBackspaceKey);
     }
 
     onArrowDownKey(event) {
@@ -1363,19 +1305,26 @@ export class AutoComplete implements AfterViewChecked, AfterContentInit, OnDestr
     }
 
     onBackspaceKey(event) {
-        if (this.multiple) {
-            if (ObjectUtils.isNotEmpty(this.modelValue()) && !this.inputEL.nativeElement.value) {
+        const isMultiple = this.multiple;
+        const hasValue = this.modelValue() && this.modelValue().length > 0;
+        const inputEmpty = !this.inputEL.nativeElement.value;
+        const showClear = this.showClear;
+        const selectedOptionIndex = this.findSelectedOptionIndex();
+
+        if (isMultiple) {
+            if (hasValue && inputEmpty) {
                 const removedValue = this.modelValue()[this.modelValue().length - 1];
                 const newValue = this.modelValue().slice(0, -1);
                 this.updateModel(newValue);
                 this.onUnselect.emit({ originalEvent: event, value: removedValue });
             }
-
-            event.stopPropagation(); // To prevent onBackspaceKeyOnMultiple method
-        }
-
-        if (!this.multiple && this.showClear && this.findSelectedOptionIndex() != -1) {
-            this.clear();
+        } else {
+            if (showClear && selectedOptionIndex !== -1) {
+                this.clear();
+                event.preventDefault();
+            } else {
+                event.stopPropagation();
+            }
         }
     }
 
@@ -1471,7 +1420,8 @@ export class AutoComplete implements AfterViewChecked, AfterContentInit, OnDestr
     }
 
     autoUpdateModel() {
-        if ((this.selectOnFocus || this.autoHighlight) && this.autoOptionFocus && !this.hasSelectedOption()) {
+        const shouldAutoUpdate = (this.selectOnFocus || this.autoHighlight) && this.autoOptionFocus && !this.hasSelectedOption();
+        if (shouldAutoUpdate) {
             const focusedOptionIndex = this.findFirstFocusedOptionIndex();
             this.focusedOptionIndex.set(focusedOptionIndex);
             this.onOptionSelect(null, this.visibleOptions()[this.focusedOptionIndex()], false);
@@ -1480,16 +1430,25 @@ export class AutoComplete implements AfterViewChecked, AfterContentInit, OnDestr
 
     scrollInView(index = -1) {
         const id = index !== -1 ? `${this.id}_${index}` : this.focusedOptionId;
-        if (this.itemsViewChild && this.itemsViewChild.nativeElement) {
-            const element = DomHandler.findSingle(this.itemsViewChild.nativeElement, `li[id="${id}"]`);
-            if (element) {
-                element.scrollIntoView && element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-            } else if (!this.virtualScrollerDisabled) {
-                setTimeout(() => {
-                    this.virtualScroll && this.scroller?.scrollToIndex(index !== -1 ? index : this.focusedOptionIndex());
-                }, 0);
-            }
+        const scrollElement = this.getScrollElement(id);
+        if (scrollElement) {
+            scrollElement.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        } else if (!this.virtualScrollerDisabled) {
+            this.scrollVirtualElement(index);
         }
+    }
+
+    private getScrollElement(id: string) {
+        if (this.itemsViewChild && this.itemsViewChild.nativeElement) {
+            return DomHandler.findSingle(this.itemsViewChild.nativeElement, `li[id="${id}"]`);
+        }
+        return null;
+    }
+
+    private scrollVirtualElement(index: number) {
+        setTimeout(() => {
+            this.virtualScroll && this.scroller?.scrollToIndex(index !== -1 ? index : this.focusedOptionIndex());
+        }, 0);
     }
 
     changeFocusedOptionIndex(event, index) {
@@ -1593,27 +1552,31 @@ export class AutoComplete implements AfterViewChecked, AfterContentInit, OnDestr
     }
 
     onOverlayAnimationStart(event: AnimationEvent) {
-        if (event.toState === 'visible') {
-            this.itemsWrapper = DomHandler.findSingle(this.overlayViewChild.overlayViewChild?.nativeElement, this.virtualScroll ? '.p-scroller' : '.p-autocomplete-panel');
+        if (event.toState !== 'visible') return;
 
-            if (this.virtualScroll) {
-                this.scroller?.setContentEl(this.itemsViewChild?.nativeElement);
+        const itemsWrapper = DomHandler.findSingle(this.overlayViewChild.overlayViewChild?.nativeElement, this.virtualScroll ? '.p-scroller' : '.p-autocomplete-panel');
+        const visibleOptions = this.visibleOptions();
+
+        if (visibleOptions && visibleOptions.length) {
+            this.handleVisibleOptions(itemsWrapper, visibleOptions);
+        }
+    }
+
+    private handleVisibleOptions(itemsWrapper: HTMLElement, visibleOptions: any[]) {
+        if (this.virtualScroll) {
+            if (this.scroller && this.itemsViewChild?.nativeElement) {
+                this.scroller.setContentEl(this.itemsViewChild.nativeElement);
                 this.scroller.viewInit();
-            }
-            if (this.visibleOptions() && this.visibleOptions().length) {
-                if (this.virtualScroll) {
-                    const selectedIndex = this.modelValue() ? this.focusedOptionIndex() : -1;
 
-                    if (selectedIndex !== -1) {
-                        this.scroller?.scrollToIndex(selectedIndex);
-                    }
-                } else {
-                    let selectedListItem = DomHandler.findSingle(this.itemsWrapper, '.p-autocomplete-item.p-highlight');
-
-                    if (selectedListItem) {
-                        selectedListItem.scrollIntoView({ block: 'nearest', inline: 'center' });
-                    }
+                const selectedIndex = this.modelValue ? this.focusedOptionIndex() : -1;
+                if (selectedIndex !== -1) {
+                    this.scroller.scrollToIndex(selectedIndex);
                 }
+            }
+        } else {
+            const selectedListItem = DomHandler.findSingle(itemsWrapper, '.p-autocomplete-item.p-highlight');
+            if (selectedListItem) {
+                selectedListItem.scrollIntoView({ block: 'nearest', inline: 'start' });
             }
         }
     }
