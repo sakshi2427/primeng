@@ -1036,61 +1036,24 @@ export class Dropdown implements OnInit, AfterViewInit, AfterContentInit, AfterV
     }
 
     ngAfterContentInit() {
+        const templateMap = new Map();
+
         (this.templates as QueryList<PrimeTemplate>).forEach((item) => {
-            switch (item.getType()) {
-                case 'item':
-                    this.itemTemplate = item.template;
-                    break;
-
-                case 'selectedItem':
-                    this.selectedItemTemplate = item.template;
-                    break;
-
-                case 'header':
-                    this.headerTemplate = item.template;
-                    break;
-
-                case 'filter':
-                    this.filterTemplate = item.template;
-                    break;
-
-                case 'footer':
-                    this.footerTemplate = item.template;
-                    break;
-
-                case 'emptyfilter':
-                    this.emptyFilterTemplate = item.template;
-                    break;
-
-                case 'empty':
-                    this.emptyTemplate = item.template;
-                    break;
-
-                case 'group':
-                    this.groupTemplate = item.template;
-                    break;
-
-                case 'loader':
-                    this.loaderTemplate = item.template;
-                    break;
-
-                case 'dropdownicon':
-                    this.dropdownIconTemplate = item.template;
-                    break;
-
-                case 'clearicon':
-                    this.clearIconTemplate = item.template;
-                    break;
-
-                case 'filtericon':
-                    this.filterIconTemplate = item.template;
-                    break;
-
-                default:
-                    this.itemTemplate = item.template;
-                    break;
-            }
+            templateMap.set(item.getType(), item.template);
         });
+
+        this.itemTemplate = templateMap.get('item');
+        this.selectedItemTemplate = templateMap.get('selectedItem');
+        this.headerTemplate = templateMap.get('header');
+        this.filterTemplate = templateMap.get('filter');
+        this.footerTemplate = templateMap.get('footer');
+        this.emptyFilterTemplate = templateMap.get('emptyfilter');
+        this.emptyTemplate = templateMap.get('empty');
+        this.groupTemplate = templateMap.get('group');
+        this.loaderTemplate = templateMap.get('loader');
+        this.dropdownIconTemplate = templateMap.get('dropdownicon');
+        this.clearIconTemplate = templateMap.get('clearicon');
+        this.filterIconTemplate = templateMap.get('filtericon');
     }
 
     flatOptions(options) {
@@ -1366,13 +1329,13 @@ export class Dropdown implements OnInit, AfterViewInit, AfterContentInit, AfterV
     }
 
     private handleOptionScrolling() {
-        if (this.virtualScroll) {
-            const selectedIndex = this.modelValue() ? this.focusedOptionIndex() : -1;
-            if (selectedIndex !== -1) {
-                this.scroller?.scrollToIndex(selectedIndex);
-            }
-        } else {
+        const selectedIndex = this.modelValue() ? this.focusedOptionIndex() : -1;
+
+        if (this.virtualScroll && selectedIndex !== -1) {
+            this.scroller?.scrollToIndex(selectedIndex);
+        } else if (!this.virtualScroll) {
             const selectedListItem = DomHandler.findSingle(this.itemsWrapper, '.p-dropdown-item.p-highlight');
+
             if (selectedListItem) {
                 selectedListItem.scrollIntoView({ block: 'nearest', inline: 'nearest' });
             }
@@ -1440,42 +1403,52 @@ export class Dropdown implements OnInit, AfterViewInit, AfterContentInit, AfterV
             return;
         }
 
+        this.handleArrowKeys(event);
+        this.handleEditableArrowKeys(event);
+        this.handleOtherKeys(event, search);
+
+        this.clicked.set(false);
+    }
+
+    handleArrowKeys(event: KeyboardEvent) {
         const handleArrowKey = (key: string, handler: (event: KeyboardEvent) => void) => {
             if (event.code === key) {
                 handler(event);
             }
         };
 
+        handleArrowKey('ArrowDown', this.onArrowDownKey.bind(this));
+        handleArrowKey('ArrowUp', this.onArrowUpKey.bind(this, this.editable));
+        handleArrowKey('Delete', this.onDeleteKey.bind(this));
+        handleArrowKey('PageDown', this.onPageDownKey.bind(this));
+        handleArrowKey('PageUp', this.onPageUpKey.bind(this));
+        handleArrowKey('Enter', this.onEnterKey.bind(this));
+        handleArrowKey('NumpadEnter', this.onEnterKey.bind(this));
+        handleArrowKey('Escape', this.onEscapeKey.bind(this));
+        handleArrowKey('Tab', this.onTabKey.bind(this));
+    }
+
+    handleEditableArrowKeys(event: KeyboardEvent) {
         const handleEditableKey = (key: string, handler: (event: KeyboardEvent) => void) => {
             if (event.code === key && this.editable) {
                 handler(event);
             }
         };
 
-        handleArrowKey('ArrowDown', this.onArrowDownKey.bind(this));
-        handleArrowKey('ArrowUp', this.onArrowUpKey.bind(this, this.editable));
         handleEditableKey('ArrowLeft', this.onArrowLeftKey.bind(this, event));
         handleEditableKey('ArrowRight', this.onArrowLeftKey.bind(this, event));
-        handleArrowKey('Delete', this.onDeleteKey.bind(this));
         handleEditableKey('Home', this.onHomeKey.bind(this, event));
         handleEditableKey('End', this.onEndKey.bind(this, event));
-        handleArrowKey('PageDown', this.onPageDownKey.bind(this));
-        handleArrowKey('PageUp', this.onPageUpKey.bind(this));
-        handleArrowKey('Space', this.onSpaceKey.bind(this, event, search));
-        handleArrowKey('Enter', this.onEnterKey.bind(this));
-        handleArrowKey('NumpadEnter', this.onEnterKey.bind(this));
-        handleArrowKey('Escape', this.onEscapeKey.bind(this));
-        handleArrowKey('Tab', this.onTabKey.bind(this));
         handleEditableKey('Backspace', this.onBackspaceKey.bind(this, event));
+    }
 
+    handleOtherKeys(event: KeyboardEvent, search: boolean) {
         if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
             // NOOP
         } else if (!event.metaKey && ObjectUtils.isPrintableCharacter(event.key)) {
             !this.overlayVisible && this.show();
             !this.editable && this.searchOptions(event, event.key);
         }
-
-        this.clicked.set(false);
     }
 
     onFilterKeyDown(event) {
@@ -1509,10 +1482,6 @@ export class Dropdown implements OnInit, AfterViewInit, AfterContentInit, AfterV
 
             this.changeFocusedOptionIndex(event, optionIndex);
         }
-        // const optionIndex = this.focusedOptionIndex() !== -1 ? this.findNextOptionIndex(this.focusedOptionIndex()) : this.findFirstFocusedOptionIndex();
-        // this.changeFocusedOptionIndex(event, optionIndex);
-
-        // !this.overlayVisible && this.show();
         event.preventDefault();
     }
 
