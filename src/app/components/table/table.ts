@@ -1182,127 +1182,96 @@ export class Table implements OnInit, AfterViewInit, AfterContentInit, Blockable
                 case 'caption':
                     this.captionTemplate = item.template;
                     break;
-
                 case 'header':
                     this.headerTemplate = item.template;
                     break;
-
                 case 'headergrouped':
                     this.headerGroupedTemplate = item.template;
                     break;
-
                 case 'body':
                     this.bodyTemplate = item.template;
                     break;
-
                 case 'loadingbody':
                     this.loadingBodyTemplate = item.template;
                     break;
-
                 case 'footer':
                     this.footerTemplate = item.template;
                     break;
-
                 case 'footergrouped':
                     this.footerGroupedTemplate = item.template;
                     break;
-
                 case 'summary':
                     this.summaryTemplate = item.template;
                     break;
-
                 case 'colgroup':
                     this.colGroupTemplate = item.template;
                     break;
-
                 case 'rowexpansion':
                     this.expandedRowTemplate = item.template;
                     break;
-
                 case 'groupheader':
                     this.groupHeaderTemplate = item.template;
                     break;
-
                 case 'groupfooter':
                     this.groupFooterTemplate = item.template;
                     break;
-
                 case 'frozenheader':
                     this.frozenHeaderTemplate = item.template;
                     break;
-
                 case 'frozenbody':
                     this.frozenBodyTemplate = item.template;
                     break;
-
                 case 'frozenfooter':
                     this.frozenFooterTemplate = item.template;
                     break;
-
                 case 'frozencolgroup':
                     this.frozenColGroupTemplate = item.template;
                     break;
-
                 case 'frozenrowexpansion':
                     this.frozenExpandedRowTemplate = item.template;
                     break;
-
                 case 'emptymessage':
                     this.emptyMessageTemplate = item.template;
                     break;
-
                 case 'paginatorleft':
                     this.paginatorLeftTemplate = item.template;
                     break;
-
                 case 'paginatorright':
                     this.paginatorRightTemplate = item.template;
                     break;
-
                 case 'paginatordropdownicon':
                     this.paginatorDropdownIconTemplate = item.template;
                     break;
-
                 case 'paginatordropdownitem':
                     this.paginatorDropdownItemTemplate = item.template;
                     break;
-
                 case 'paginatorfirstpagelinkicon':
                     this.paginatorFirstPageLinkIconTemplate = item.template;
                     break;
-
                 case 'paginatorlastpagelinkicon':
                     this.paginatorLastPageLinkIconTemplate = item.template;
                     break;
-
                 case 'paginatorpreviouspagelinkicon':
                     this.paginatorPreviousPageLinkIconTemplate = item.template;
                     break;
-
                 case 'paginatornextpagelinkicon':
                     this.paginatorNextPageLinkIconTemplate = item.template;
                     break;
-
                 case 'loadingicon':
                     this.loadingIconTemplate = item.template;
                     break;
-
                 case 'reorderindicatorupicon':
                     this.reorderIndicatorUpIconTemplate = item.template;
                     break;
-
                 case 'reorderindicatordownicon':
                     this.reorderIndicatorDownIconTemplate = item.template;
                     break;
-
                 case 'sorticon':
                     this.sortIconTemplate = item.template;
                     break;
-
                 case 'checkboxicon':
                     this.checkboxIconTemplate = item.template;
                     break;
-
                 case 'headercheckboxicon':
                     this.headerCheckboxIconTemplate = item.template;
                     break;
@@ -1916,7 +1885,7 @@ export class Table implements OnInit, AfterViewInit, AfterContentInit, Blockable
         }
     }
 
-    isSelected(rowData: any) {
+        isSelected(rowData: any) {
         if (rowData && this.selection) {
             if (this.dataKey) {
                 return this.selectionKeys[ObjectUtils.resolveFieldData(rowData, this.dataKey)] !== undefined;
@@ -3289,24 +3258,23 @@ export class RowGroupHeader {
     }
 })
 export class FrozenColumn implements AfterViewInit {
+
     @Input() get frozen(): boolean {
         return this._frozen;
     }
 
     set frozen(val: boolean) {
         this._frozen = val;
-        Promise.resolve(null).then(() => this.updateStickyPosition());
+        this.updateStickyPosition();
     }
 
     @Input() alignFrozen: string = 'left';
 
-    constructor(private el: ElementRef, private zone: NgZone) {}
+    constructor(private el: ElementRef, private zone: NgZone) { }
 
     ngAfterViewInit() {
         this.zone.runOutsideAngular(() => {
-            setTimeout(() => {
-                this.updateStickyPosition();
-            }, 1000);
+            this.updateStickyPosition();
         });
     }
 
@@ -3314,34 +3282,52 @@ export class FrozenColumn implements AfterViewInit {
 
     updateStickyPosition() {
         if (this._frozen) {
-            if (this.alignFrozen === 'right') {
-                let right = 0;
-                let next = this.el.nativeElement.nextElementSibling;
-                if (next) {
-                    right = DomHandler.getOuterWidth(next) + (parseFloat(next.style.right) || 0);
-                }
-                this.el.nativeElement.style.right = right + 'px';
-            } else {
-                let left = 0;
-                let prev = this.el.nativeElement.previousElementSibling;
-                if (prev) {
-                    left = DomHandler.getOuterWidth(prev) + (parseFloat(prev.style.left) || 0);
-                }
-                this.el.nativeElement.style.left = left + 'px';
-            }
+            this.setPosition();
+        }
+    }
 
-            const filterRow = this.el.nativeElement?.parentElement?.nextElementSibling;
+    setPosition() {
+        if (this.alignFrozen === 'right') {
+            this.setRightPosition();
+        } else {
+            this.setLeftPosition();
+        }
+        
+        this.updateFilterRow();
+    }
 
-            if (filterRow) {
-                let index = DomHandler.index(this.el.nativeElement);
-                if (filterRow.children && filterRow.children[index]) {
-                    filterRow.children[index].style.left = this.el.nativeElement.style.left;
-                    filterRow.children[index].style.right = this.el.nativeElement.style.right;
-                }
+    setLeftPosition() {
+        let left = 0;
+        let prev = this.el.nativeElement.previousElementSibling;
+        if (prev) {
+            left = DomHandler.getOuterWidth(prev) + (parseFloat(prev.style.left) || 0);
+        }
+        this.el.nativeElement.style.left = left + 'px';
+    }
+
+    setRightPosition() {
+        let right = 0;
+        let next = this.el.nativeElement.nextElementSibling;
+        if (next) {
+            right = DomHandler.getOuterWidth(next) + (parseFloat(next.style.right) || 0);
+        }
+        this.el.nativeElement.style.right = right + 'px';
+    }
+
+    updateFilterRow() {
+        const filterRow = this.el.nativeElement?.parentElement?.nextElementSibling;
+
+        if (filterRow) {
+            let index = DomHandler.index(this.el.nativeElement);
+            if (filterRow.children && filterRow.children[index]) {
+                filterRow.children[index].style.left = this.el.nativeElement.style.left;
+                filterRow.children[index].style.right = this.el.nativeElement.style.right;
             }
         }
     }
+
 }
+
 @Directive({
     selector: '[pSortableColumn]',
     host: {
@@ -3474,13 +3460,13 @@ export class SortIcon implements OnInit, OnDestroy {
     }
 
     getMultiSortMetaIndex() {
-        let multiSortMeta = this.dt._multiSortMeta;
+        const multiSortMeta = this.dt._multiSortMeta;
         let index = -1;
 
-        if (multiSortMeta && this.dt.sortMode === 'multiple' && this.dt.showInitialSortBadge && multiSortMeta.length > 1) {
+        if (multiSortMeta && this.dt.sortMode === 'multiple') {
             for (let i = 0; i < multiSortMeta.length; i++) {
-                let meta = multiSortMeta[i];
-                if (meta.field === this.field || meta.field === this.field) {
+                const meta = multiSortMeta[i];
+                if (meta.field === this.field) {
                     index = i;
                     break;
                 }
@@ -3491,13 +3477,13 @@ export class SortIcon implements OnInit, OnDestroy {
     }
 
     getBadgeValue() {
-        let index = this.getMultiSortMetaIndex();
+        const index = this.getMultiSortMetaIndex();
 
-        return this.dt.groupRowsBy && index > -1 ? index : index + 1;
+        return index > -1 ? index + 1 : index + 1;
     }
 
     isMultiSorted() {
-        return this.dt.sortMode === 'multiple' && this.getMultiSortMetaIndex() > -1;
+        return this.getMultiSortMetaIndex() > -1;
     }
 
     ngOnDestroy() {
@@ -3506,6 +3492,7 @@ export class SortIcon implements OnInit, OnDestroy {
         }
     }
 }
+
 
 @Directive({
     selector: '[pSelectableRow]',
@@ -3531,16 +3518,14 @@ export class SelectableRow implements OnInit, OnDestroy {
 
     constructor(public dt: Table, public tableService: TableService, private el: ElementRef) {
         if (this.isEnabled()) {
-            this.subscription = this.dt.tableService.selectionSource$.subscribe(() => {
-                this.selected = this.dt.isSelected(this.data);
-            });
+            this.subscribeToSelectionChanges();
         }
     }
 
     setRowTabIndex() {
-        if (this.dt.selectionMode === 'single' || this.dt.selectionMode === 'multiple') {
-            return !this.dt.selection ? 0 : this.dt.anchorRowIndex === this.index ? 0 : -1;
-        }
+        const selectionModeAllowsTabIndex = this.dt.selectionMode === 'single' || this.dt.selectionMode === 'multiple';
+        const shouldSetTabIndex = !this.dt.selection || this.dt.anchorRowIndex === this.index;
+        return selectionModeAllowsTabIndex ? shouldSetTabIndex ? 0 : -1 : null;
     }
 
     ngOnInit() {
@@ -3569,6 +3554,16 @@ export class SelectableRow implements OnInit, OnDestroy {
 
     @HostListener('keydown', ['$event'])
     onKeyDown(event: KeyboardEvent) {
+        this.handleKeyDown(event);
+    }
+
+    subscribeToSelectionChanges() {
+        this.subscription = this.dt.tableService.selectionSource$.subscribe(() => {
+            this.selected = this.dt.isSelected(this.data);
+        });
+    }
+    
+    handleKeyDown(event: KeyboardEvent) {
         switch (event.code) {
             case 'ArrowDown':
                 this.onArrowDownKey(event);
@@ -3595,42 +3590,40 @@ export class SelectableRow implements OnInit, OnDestroy {
                 break;
 
             default:
-                if (event.code === 'KeyA' && (event.metaKey || event.ctrlKey) && this.dt.selectionMode === 'multiple') {
-                    const data = this.dt.dataToRender(this.dt.processedData);
-                    this.dt.selection = [...data];
-                    this.dt.selectRange(event, data.length - 1);
-
-                    event.preventDefault();
-                }
+                this.handleDefaultKeyDown(event);
                 break;
         }
     }
 
+    handleDefaultKeyDown(event: KeyboardEvent) {
+        const isSelectAllKeyCombo = event.code === 'KeyA' && (event.metaKey || event.ctrlKey);
+        if (isSelectAllKeyCombo && this.dt.selectionMode === 'multiple') {
+            const data = this.dt.dataToRender(this.dt.processedData);
+            this.dt.selection = [...data];
+            this.dt.selectRange(event, data.length - 1);
+
+            event.preventDefault();
+        }
+    }
+
     onArrowDownKey(event: KeyboardEvent) {
-        if (!this.isEnabled()) {
-            return;
-        }
-
-        const row = <HTMLTableRowElement>event.currentTarget;
-        const nextRow = this.findNextSelectableRow(row);
-
-        if (nextRow) {
-            nextRow.focus();
-        }
-
-        event.preventDefault();
+        this.navigateVertical(event, this.findNextSelectableRow);
     }
 
     onArrowUpKey(event: KeyboardEvent) {
+        this.navigateVertical(event, this.findPrevSelectableRow);
+    }
+
+    navigateVertical(event: KeyboardEvent, findRow: (row: HTMLTableRowElement) => HTMLTableRowElement | null) {
         if (!this.isEnabled()) {
             return;
         }
 
         const row = <HTMLTableRowElement>event.currentTarget;
-        const prevRow = this.findPrevSelectableRow(row);
+        const nextRow = findRow(row);
 
-        if (prevRow) {
-            prevRow.focus();
+        if (nextRow) {
+            nextRow.focus();
         }
 
         event.preventDefault();
@@ -3649,63 +3642,84 @@ export class SelectableRow implements OnInit, OnDestroy {
     }
 
     onEndKey(event: KeyboardEvent) {
-        const lastRow = this.findLastSelectableRow();
-        lastRow && this.focusRowChange(this.el.nativeElement, lastRow);
-
-        if (event.ctrlKey && event.shiftKey) {
-            const data = this.dt.dataToRender(this.dt.rows);
-            const lastSelectableRowIndex = DomHandler.getAttribute(lastRow, 'index');
-
-            this.dt.anchorRowIndex = lastSelectableRowIndex;
-            this.dt.selection = data.slice(this.index, data.length);
-            this.dt.selectRange(event, this.index);
-        }
-        event.preventDefault();
+        this.navigateHorizontal(event, this.findLastSelectableRow, true);
     }
 
     onHomeKey(event: KeyboardEvent) {
-        const firstRow = this.findFirstSelectableRow();
+        this.navigateHorizontal(event, this.findFirstSelectableRow, false);
+    }
 
-        firstRow && this.focusRowChange(this.el.nativeElement, firstRow);
-
+    navigateHorizontal(event: KeyboardEvent, findRow: () => HTMLTableRowElement | null, isEndKey: boolean) {
+        const row = findRow();
+        if (row) {
+            this.focusRowChange(this.el.nativeElement, row);
+        }
+        
         if (event.ctrlKey && event.shiftKey) {
             const data = this.dt.dataToRender(this.dt.rows);
-            const firstSelectableRowIndex = DomHandler.getAttribute(firstRow, 'index');
+            const rowIndex = DomHandler.getAttribute(row, 'index');
 
-            this.dt.anchorRowIndex = this.dt.anchorRowIndex || firstSelectableRowIndex;
-            this.dt.selection = data.slice(0, this.index + 1);
+            this.dt.anchorRowIndex = rowIndex;
+            this.dt.selection = this.calculateHorizontalSelection(data, rowIndex, isEndKey);
             this.dt.selectRange(event, this.index);
         }
+        
         event.preventDefault();
     }
 
-    onSpaceKey(event) {
-        const isInput = event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLTextAreaElement;
-        if (isInput) {
-            return;
+    calculateHorizontalSelection(data: any[], rowIndex: number, isEndKey: boolean) {
+        if (isEndKey) {
+            return data.slice(this.index, data.length);
         } else {
-            this.onEnterKey(event);
+            return data.slice(0, this.index + 1);
+        }
+    }
 
-            if (event.shiftKey && this.dt.selection !== null) {
-                const data = this.dt.dataToRender(this.dt.rows);
-                let index;
+    onSpaceKey(event) {
+        this.handleSpaceKey(event);
+    }
 
-                if (ObjectUtils.isNotEmpty(this.dt.selection) && this.dt.selection.length > 0) {
-                    let firstSelectedRowIndex, lastSelectedRowIndex;
-                    firstSelectedRowIndex = ObjectUtils.findIndexInList(this.dt.selection[0], data);
-                    lastSelectedRowIndex = ObjectUtils.findIndexInList(this.dt.selection[this.dt.selection.length - 1], data);
+    handleSpaceKey(event) {
+        if (this.isInputElement(event.target)) {
+            return;
+        }
 
-                    index = this.index <= firstSelectedRowIndex ? lastSelectedRowIndex : firstSelectedRowIndex;
-                } else {
-                    index = ObjectUtils.findIndexInList(this.dt.selection, data);
-                }
+        this.onEnterKey(event);
 
-                this.dt.anchorRowIndex = index;
-                this.dt.selection = index !== this.index ? data.slice(Math.min(index, this.index), Math.max(index, this.index) + 1) : [this.data];
-                this.dt.selectRange(event, this.index);
-            }
+        if (event.shiftKey && this.dt.selection !== null) {
+            this.handleShiftSpaceKey(event);
+        }
 
-            event.preventDefault();
+        event.preventDefault();
+    }
+
+    isInputElement(target: EventTarget) {
+        return target instanceof HTMLInputElement 
+            || target instanceof HTMLSelectElement
+            || target instanceof HTMLTextAreaElement;
+    }
+
+    handleShiftSpaceKey(event: KeyboardEvent) {
+        const data = this.dt.dataToRender(this.dt.rows);
+        const anchorIndex = this.calculateAnchorIndex(data);
+
+        this.dt.anchorRowIndex = anchorIndex;
+        this.dt.selection = this.calculateShiftSelection(data, anchorIndex);
+        this.dt.selectRange(event, this.index);
+    }
+
+    calculateAnchorIndex(data: any[]) {
+        const firstIndex = this.dt.selection?.[0] ? ObjectUtils.findIndexInList(this.dt.selection[0], data) : -1;
+        const lastIndex = this.dt.selection?.[this.dt.selection.length - 1] ? ObjectUtils.findIndexInList(this.dt.selection[this.dt.selection.length - 1], data) : -1;
+
+        return this.index <= firstIndex ? lastIndex : firstIndex;
+    }
+
+    calculateShiftSelection(data: any[], anchorIndex: number) {
+        if (anchorIndex !== this.index) {
+            return data.slice(Math.min(anchorIndex, this.index), Math.max(anchorIndex, this.index) + 1);
+        } else {
+            return [this.data];
         }
     }
 
@@ -3757,6 +3771,8 @@ export class SelectableRow implements OnInit, OnDestroy {
         }
     }
 }
+
+
 
 @Directive({
     selector: '[pSelectableRowDblClick]',
@@ -4138,6 +4154,18 @@ export class EditableColumn implements OnChanges, AfterViewInit, OnDestroy {
         this.dt.updateEditingCell(this.el.nativeElement, this.data, this.field, <number>this.rowIndex);
         DomHandler.addClass(this.el.nativeElement, 'p-cell-editing');
         this.dt.onEditInit.emit({ field: this.field, data: this.data, index: <number>this.rowIndex });
+        
+        this.focusCell();
+        
+        this.bindOverlayListener();
+    }
+
+    closeEditingCell(completed: boolean, event: Event) {
+        this.cleanupEditingCell(completed, event);
+        this.cleanupOverlayListener();
+    }
+
+    focusCell() {
         this.zone.runOutsideAngular(() => {
             setTimeout(() => {
                 let focusCellSelector = this.pFocusCellSelector || 'input, textarea, select';
@@ -4148,7 +4176,9 @@ export class EditableColumn implements OnChanges, AfterViewInit, OnDestroy {
                 }
             }, 50);
         });
-
+    }
+    
+    bindOverlayListener() {
         this.overlayEventListener = (e: any) => {
             if (this.el && this.el.nativeElement.contains(e.target)) {
                 this.dt.selfClick = true;
@@ -4158,7 +4188,7 @@ export class EditableColumn implements OnChanges, AfterViewInit, OnDestroy {
         this.dt.overlaySubscription = this.dt.overlayService.clickObservable.subscribe(this.overlayEventListener);
     }
 
-    closeEditingCell(completed: any, event: Event) {
+    cleanupEditingCell(completed: boolean, event: Event) {
         const eventData = { field: <string>this.dt.editingCellField, data: <any>this.dt.editingCellData, originalEvent: <Event>event, index: <number>this.dt.editingCellRowIndex };
 
         if (completed) {
@@ -4178,7 +4208,9 @@ export class EditableColumn implements OnChanges, AfterViewInit, OnDestroy {
         this.dt.editingCellData = null;
         this.dt.editingCellField = null;
         this.dt.unbindDocumentEditListener();
+    }
 
+    cleanupOverlayListener() {
         if (this.dt.overlaySubscription) {
             this.dt.overlaySubscription.unsubscribe();
         }
@@ -4228,6 +4260,7 @@ export class EditableColumn implements OnChanges, AfterViewInit, OnDestroy {
             }
         }
     }
+    
     @HostListener('keydown.arrowdown', ['$event'])
     onArrowDown(event: KeyboardEvent) {
         if (this.isEnabled()) {
@@ -4410,11 +4443,10 @@ export class EditableColumn implements OnChanges, AfterViewInit, OnDestroy {
     }
 
     ngOnDestroy() {
-        if (this.dt.overlaySubscription) {
-            this.dt.overlaySubscription.unsubscribe();
-        }
+        this.cleanupOverlayListener();
     }
 }
+
 
 @Directive({
     selector: '[pEditableRow]',
@@ -4843,47 +4875,83 @@ export class ReorderableRow implements AfterViewInit {
     constructor(private renderer: Renderer2, public dt: Table, public el: ElementRef, public zone: NgZone) {}
 
     ngAfterViewInit() {
+        this.initializeDragAndDrop();
+    }
+
+    initializeDragAndDrop() {
         if (this.isEnabled()) {
             this.el.nativeElement.droppable = true;
-            this.bindEvents();
+            this.bindDragAndDropEvents();
         }
     }
 
-    bindEvents() {
+    bindDragAndDropEvents() {
         this.zone.runOutsideAngular(() => {
-            this.mouseDownListener = this.renderer.listen(this.el.nativeElement, 'mousedown', this.onMouseDown.bind(this));
-
-            this.dragStartListener = this.renderer.listen(this.el.nativeElement, 'dragstart', this.onDragStart.bind(this));
-
-            this.dragEndListener = this.renderer.listen(this.el.nativeElement, 'dragend', this.onDragEnd.bind(this));
-
-            this.dragOverListener = this.renderer.listen(this.el.nativeElement, 'dragover', this.onDragOver.bind(this));
-
-            this.dragLeaveListener = this.renderer.listen(this.el.nativeElement, 'dragleave', this.onDragLeave.bind(this));
+            this.bindMouseDownListener();
+            this.bindDragStartListener();
+            this.bindDragEndListener();
+            this.bindDragOverListener();
+            this.bindDragLeaveListener();
         });
     }
 
+    bindMouseDownListener() {
+        this.mouseDownListener = this.renderer.listen(this.el.nativeElement, 'mousedown', this.onMouseDown.bind(this));
+    }
+    
+    bindDragStartListener() {
+        this.dragStartListener = this.renderer.listen(this.el.nativeElement, 'dragstart', this.onDragStart.bind(this));
+    }
+
+    bindDragEndListener() {
+        this.dragEndListener = this.renderer.listen(this.el.nativeElement, 'dragend', this.onDragEnd.bind(this));
+    }
+
+    bindDragOverListener() {
+        this.dragOverListener = this.renderer.listen(this.el.nativeElement, 'dragover', this.onDragOver.bind(this));
+    }
+
+    bindDragLeaveListener() {
+        this.dragLeaveListener = this.renderer.listen(this.el.nativeElement, 'dragleave', this.onDragLeave.bind(this));
+    }
+
     unbindEvents() {
+        this.unbindMouseDownListener();
+        this.unbindDragStartListener();
+        this.unbindDragEndListener();
+        this.unbindDragOverListener();
+        this.unbindDragLeaveListener();
+    }
+
+    unbindMouseDownListener() {
         if (this.mouseDownListener) {
             this.mouseDownListener();
             this.mouseDownListener = null;
         }
+    }
 
+    unbindDragStartListener() {
         if (this.dragStartListener) {
             this.dragStartListener();
             this.dragStartListener = null;
         }
+    }
 
+    unbindDragEndListener() {
         if (this.dragEndListener) {
             this.dragEndListener();
             this.dragEndListener = null;
         }
+    }
 
+    unbindDragOverListener() {
         if (this.dragOverListener) {
             this.dragOverListener();
             this.dragOverListener = null;
         }
+    }
 
+    unbindDragLeaveListener() {
         if (this.dragLeaveListener) {
             this.dragLeaveListener();
             this.dragLeaveListener = null;
@@ -4891,18 +4959,22 @@ export class ReorderableRow implements AfterViewInit {
     }
 
     onMouseDown(event: Event) {
+        this.handleMouseDown(event);
+    }
+    
+    handleMouseDown(event: Event) {
         const targetElement = event.target as HTMLElement;
-        const isHandleClicked = this.isHandleElement(targetElement);
+        const isHandleClicked = this.isHandleElementClicked(targetElement);
         this.el.nativeElement.draggable = isHandleClicked;
     }
 
-    isHandleElement(element: HTMLElement): boolean {
+    isHandleElementClicked(element: HTMLElement): boolean {
         if (element?.classList.contains('p-datatable-reorderablerow-handle')) {
             return true;
         }
 
         if (element?.parentElement && !['TD', 'TR'].includes(element?.parentElement?.tagName)) {
-            return this.isHandleElement(element?.parentElement);
+            return this.isHandleElementClicked(element?.parentElement);
         }
 
         return false;
@@ -4943,6 +5015,8 @@ export class ReorderableRow implements AfterViewInit {
         this.unbindEvents();
     }
 }
+
+
 /**
  * Column Filter element of Table.
  * @group Components
@@ -5843,9 +5917,16 @@ export class ColumnFilterFormElement implements OnInit {
     }
 
     onModelChange(value: any) {
-        (<any>this.filterConstraint).value = value;
-
-        if (this.type === 'date' || this.type === 'boolean' || value === '') {
+        const isDate = this.type === 'date';
+        const isEmpty = value === '';
+        
+        if (isDate || isEmpty) {
+            (<any>this.filterConstraint).value = value;
+            this.dt._filter();
+        }
+        
+        if (this.type === 'boolean') {
+            (<any>this.filterConstraint).value = value;
             this.dt._filter();
         }
     }
@@ -5862,6 +5943,8 @@ export class ColumnFilterFormElement implements OnInit {
         }
     }
 }
+
+
 
 @NgModule({
     imports: [

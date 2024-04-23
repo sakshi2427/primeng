@@ -1216,6 +1216,7 @@ export class MultiSelect implements OnInit, AfterViewInit, AfterContentInit, Aft
         });
     }
 
+
     ngAfterViewInit() {
         if (this.overlayVisible) {
             this.show();
@@ -1246,12 +1247,23 @@ export class MultiSelect implements OnInit, AfterViewInit, AfterContentInit, Aft
     }
 
     autoUpdateModel() {
-        if (this.selectOnFocus && this.autoOptionFocus && !this.hasSelectedOption()) {
-            this.focusedOptionIndex.set(this.findFirstFocusedOptionIndex());
-            const value = this.getOptionValue(this.visibleOptions()[this.focusedOptionIndex()]);
-            this.onOptionSelect({ originalEvent: null, option: [value] });
+        const hasNoSelectedOption = !this.hasSelectedOption();
+        const shouldAutoFocus = this.selectOnFocus && this.autoOptionFocus;
+
+        if (hasNoSelectedOption && shouldAutoFocus) {
+            const firstFocusIndex = this.findFirstFocusedOptionIndex();
+            this.focusedOptionIndex.set(firstFocusIndex);
+
+            const focusedOption = this.visibleOptions()[firstFocusIndex];
+            const value = this.getOptionValue(focusedOption);
+
+            this.onOptionSelect({
+                originalEvent: null,
+                option: [value]
+            });
         }
     }
+
 
     /**
      * Updates the model value.
@@ -1532,6 +1544,8 @@ export class MultiSelect implements OnInit, AfterViewInit, AfterContentInit, Aft
         }
     }
 
+
+
     onFilterKeyDown(event: KeyboardEvent) {
         switch (event.code) {
             case 'ArrowDown':
@@ -1573,6 +1587,7 @@ export class MultiSelect implements OnInit, AfterViewInit, AfterContentInit, Aft
         }
     }
 
+
     onArrowLeftKey(event: KeyboardEvent, pressedInInputText: boolean = false) {
         pressedInInputText && this.focusedOptionIndex.set(-1);
     }
@@ -1607,11 +1622,19 @@ export class MultiSelect implements OnInit, AfterViewInit, AfterContentInit, Aft
 
             this.changeFocusedOptionIndex(event, optionIndex);
 
-            !this.overlayVisible && this.show();
+            if (!this.overlayVisible) {
+                this.show();
+            }
+
             event.preventDefault();
         }
+
         event.stopPropagation();
     }
+
+
+
+
 
     onHomeKey(event, pressedInInputText = false) {
         const { currentTarget } = event;
@@ -1701,7 +1724,11 @@ export class MultiSelect implements OnInit, AfterViewInit, AfterContentInit, Aft
     onTabKey(event, pressedInInputText = false) {
         if (!pressedInInputText) {
             if (this.overlayVisible && this.hasFocusableElements()) {
-                DomHandler.focus(event.shiftKey ? this.lastHiddenFocusableElementOnOverlay.nativeElement : this.firstHiddenFocusableElementOnOverlay.nativeElement);
+                if (event.shiftKey) {
+                    DomHandler.focus(this.lastHiddenFocusableElementOnOverlay.nativeElement);
+                } else {
+                    DomHandler.focus(this.firstHiddenFocusableElementOnOverlay.nativeElement);
+                }
 
                 event.preventDefault();
             } else {
@@ -1709,24 +1736,64 @@ export class MultiSelect implements OnInit, AfterViewInit, AfterContentInit, Aft
                     this.onOptionSelect({ originalEvent: event, option: this.visibleOptions()[this.focusedOptionIndex()] });
                 }
 
-                this.overlayVisible && this.hide(this.filter);
+                if (this.overlayVisible) {
+                    this.hide(this.filter);
+                }
             }
         }
     }
+
+
 
     onShiftKey() {
         this.startRangeIndex.set(this.focusedOptionIndex());
     }
 
     onContainerClick(event: any) {
-        if (this.disabled || this.readonly || (event.target as Node).isSameNode(this.focusInputViewChild?.nativeElement)) {
+        if (this.disabled || this.readonly) {
             return;
         }
 
-        if (event.target.tagName === 'INPUT' || event.target.getAttribute('data-pc-section') === 'clearicon' || event.target.closest('[data-pc-section="clearicon"]')) {
+        if ((event.target as Node).isSameNode(this.focusInputViewChild?.nativeElement)) {
+            return;
+        }
+
+        this.handleClearIconClick(event);
+
+        this.handleOverlayClick(event);
+
+        this.focusInputAndEmitClick(event);
+    }
+
+
+    handleClearIconClick(event: any) {
+        const isInput = event.target.tagName === 'INPUT';
+
+        if (isInput) {
             event.preventDefault();
             return;
-        } else if (!this.overlayViewChild || !this.overlayViewChild.el.nativeElement.contains(event.target)) {
+        }
+
+        const isClearIcon = event.target.getAttribute('data-pc-section') === 'clearicon';
+
+        if (isClearIcon) {
+            event.preventDefault();
+            return;
+        }
+
+        const isInClearIconSection = event.target.closest('[data-pc-section="clearicon"]');
+
+        if (isInClearIconSection) {
+            event.preventDefault();
+            return;
+        }
+    }
+
+
+
+
+    handleOverlayClick(event: any) {
+        if (!this.overlayViewChild || !this.overlayViewChild.el.nativeElement.contains(event.target)) {
             if (this.clickInProgress) {
                 return;
             }
@@ -1739,10 +1806,15 @@ export class MultiSelect implements OnInit, AfterViewInit, AfterContentInit, Aft
 
             this.overlayVisible ? this.hide(true) : this.show(true);
         }
+    }
+
+    focusInputAndEmitClick(event: any) {
         this.focusInputViewChild?.nativeElement.focus({ preventScroll: true });
         this.onClick.emit(event);
         this.cd.detectChanges();
     }
+
+
 
     onFirstHiddenFocus(event) {
         const focusableEl =
@@ -1834,38 +1906,66 @@ export class MultiSelect implements OnInit, AfterViewInit, AfterContentInit, Aft
             return;
         }
 
+        this.handleSelectAll(event);
+
+        this.updateModelAndEmitEvents(event);
+
+        this.focusHeaderCheckbox(event);
+    }
+
+    handleSelectAll(event) {
         if (this.selectAll != null) {
             this.onSelectAllChange.emit({
                 originalEvent: event,
                 checked: !this.allSelected()
             });
         } else {
-            const value = this.allSelected()
-                ? this.visibleOptions()
-                      .filter((option) => !this.isValidOption(option) && this.isSelected(option))
-                      .map((option) => this.getOptionValue(option))
-                : this.visibleOptions()
-                      .filter((option) => this.isSelected(option) || this.isValidOption(option))
-                      .map((option) => this.getOptionValue(option));
-
+            const value = this.getAllToggleAllValue(event);
             this.updateModel(value, event);
 
-            // because onToggleAll could have been called during filtering,  this additional test needs to be performed before calling onSelectAllChange.emit
-            if (!value.length || value.length === this.getAllVisibleAndNonVisibleOptions().length) {
+            if (this.shouldEmitSelectAllChange(value)) {
                 this.onSelectAllChange.emit({
                     originalEvent: event,
                     checked: !!value.length
                 });
             }
         }
+    }
 
+    getAllToggleAllValue(event) {
+        return this.allSelected() ? this.getDeselectedOptions() : this.getSelectedOptions();
+    }
+
+    getDeselectedOptions() {
+        return this.visibleOptions()
+            .filter((option) => !this.isValidOption(option) && this.isSelected(option))
+            .map((option) => this.getOptionValue(option));
+    }
+
+    getSelectedOptions() {
+        return this.visibleOptions()
+            .filter((option) => this.isSelected(option) || this.isValidOption(option))
+            .map((option) => this.getOptionValue(option));
+    }
+
+    shouldEmitSelectAllChange(value) {
+        return !value.length || value.length === this.getAllVisibleAndNonVisibleOptions().length;
+    }
+
+    updateModelAndEmitEvents(event) {
         this.onChange.emit({ originalEvent: event, value: this.value });
+
+        this.onModelChange(this.value);
+    }
+
+    focusHeaderCheckbox(event) {
         DomHandler.focus(this.headerCheckboxViewChild?.nativeElement);
         this.headerCheckboxFocus = true;
 
         event.preventDefault();
         event.stopPropagation();
     }
+
 
     changeFocusedOptionIndex(event, index) {
         if (this.focusedOptionIndex() !== index) {
@@ -1956,36 +2056,63 @@ export class MultiSelect implements OnInit, AfterViewInit, AfterContentInit, Aft
         switch (event.toState) {
             case 'visible':
                 this.itemsWrapper = DomHandler.findSingle(this.overlayViewChild?.overlayViewChild?.nativeElement, this.virtualScroll ? '.p-scroller' : '.p-multiselect-items-wrapper');
-                this.virtualScroll && this.scroller?.setContentEl(this.itemsViewChild?.nativeElement);
 
-                if (this._options() && this._options().length) {
-                    if (this.virtualScroll) {
-                        const selectedIndex = ObjectUtils.isNotEmpty(this.modelValue()) ? this.focusedOptionIndex() : -1;
-                        if (selectedIndex !== -1) {
-                            this.scroller?.scrollToIndex(selectedIndex);
-                        }
-                    } else {
-                        let selectedListItem = DomHandler.findSingle(this.itemsWrapper, '.p-multiselect-item.p-highlight');
+                this.setVirtualScrollContent();
 
-                        if (selectedListItem) {
-                            selectedListItem.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-                        }
-                    }
-                }
+                this.scrollToSelectedItem();
 
-                if (this.filterInputChild && this.filterInputChild.nativeElement) {
-                    this.preventModelTouched = true;
-
-                    if (this.autofocusFilter) {
-                        this.filterInputChild.nativeElement.focus();
-                    }
-                }
+                this.focusFilterInput();
 
                 this.onPanelShow.emit();
+
             case 'void':
                 this.itemsWrapper = null;
                 this.onModelTouched();
                 break;
+        }
+    }
+
+    setVirtualScrollContent() {
+        if (this.virtualScroll) {
+            this.scroller?.setContentEl(this.itemsViewChild?.nativeElement);
+        }
+    }
+
+    scrollToSelectedItem() {
+        if (this._options() && this._options().length) {
+            if (this.virtualScroll) {
+                const selectedIndex = this.getSelectedIndex();
+                if (selectedIndex !== -1) {
+                    this.scroller?.scrollToIndex(selectedIndex);
+                }
+            } else {
+                this.scrollSelectedItemIntoView();
+            }
+        }
+    }
+
+    getSelectedIndex() {
+        return ObjectUtils.isNotEmpty(this.modelValue()) ? this.focusedOptionIndex() : -1;
+    }
+
+    scrollSelectedItemIntoView() {
+        const selectedListItem = this.getSelectedListItem();
+        if (selectedListItem) {
+            selectedListItem.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        }
+    }
+
+    getSelectedListItem() {
+        return DomHandler.findSingle(this.itemsWrapper, '.p-multiselect-item.p-highlight');
+    }
+
+    focusFilterInput() {
+        if (this.filterInputChild && this.filterInputChild.nativeElement) {
+            this.preventModelTouched = true;
+
+            if (this.autofocusFilter) {
+                this.filterInputChild.nativeElement.focus();
+            }
         }
     }
 
@@ -2073,25 +2200,27 @@ export class MultiSelect implements OnInit, AfterViewInit, AfterContentInit, Aft
     searchOptions(event, char) {
         this.searchValue = (this.searchValue || '') + char;
 
+        let optionIndex = this.findOptionIndex(char);
+
+        if (optionIndex !== -1) {
+            this.changeFocusedOptionIndex(event, optionIndex);
+        }
+
+        this.clearSearchTimeout();
+
+        this.setNewSearchTimeout();
+
+        return optionIndex !== -1;
+    }
+
+    findOptionIndex(char) {
         let optionIndex = -1;
         let matched = false;
 
         if (this.focusedOptionIndex() !== -1) {
-            optionIndex = this.visibleOptions()
-                .slice(this.focusedOptionIndex())
-                .findIndex((option) => this.isOptionMatched(option));
-            optionIndex =
-                optionIndex === -1
-                    ? this.visibleOptions()
-                          .slice(0, this.focusedOptionIndex())
-                          .findIndex((option) => this.isOptionMatched(option))
-                    : optionIndex + this.focusedOptionIndex();
+            optionIndex = this.findOptionIndexFromFocused(char);
         } else {
             optionIndex = this.visibleOptions().findIndex((option) => this.isOptionMatched(option));
-        }
-
-        if (optionIndex !== -1) {
-            matched = true;
         }
 
         if (optionIndex === -1 && this.focusedOptionIndex() === -1) {
@@ -2099,40 +2228,58 @@ export class MultiSelect implements OnInit, AfterViewInit, AfterContentInit, Aft
         }
 
         if (optionIndex !== -1) {
-            this.changeFocusedOptionIndex(event, optionIndex);
+            matched = true;
         }
 
+        return optionIndex;
+    }
+
+    findOptionIndexFromFocused(char) {
+        return (
+            this.visibleOptions()
+                .slice(this.focusedOptionIndex())
+                .findIndex((option) => this.isOptionMatched(option)) ??
+            this.visibleOptions()
+                .slice(0, this.focusedOptionIndex())
+                .findIndex((option) => this.isOptionMatched(option))
+        );
+    }
+
+    clearSearchTimeout() {
         if (this.searchTimeout) {
             clearTimeout(this.searchTimeout);
         }
+    }
 
+    setNewSearchTimeout() {
         this.searchTimeout = setTimeout(() => {
             this.searchValue = '';
             this.searchTimeout = null;
         }, 500);
-
-        return matched;
     }
 
     activateFilter() {
         if (this.hasFilter() && this._options) {
+            let filteredOptions;
             if (this.group) {
                 let filteredGroups = [];
                 for (let optgroup of this.options as any[]) {
                     let filteredSubOptions = this.filterService.filter(this.getOptionGroupChildren(optgroup), this.searchFields(), this.filterValue, this.filterMatchMode, this.filterLocale);
                     if (filteredSubOptions && filteredSubOptions.length) {
-                        filteredGroups.push({ ...optgroup, ...{ [this.optionGroupChildren]: filteredSubOptions } });
+                        filteredGroups.push({ ...optgroup, [this.optionGroupChildren]: filteredSubOptions });
                     }
                 }
-
-                this._filteredOptions = filteredGroups;
+                filteredOptions = filteredGroups;
             } else {
-                this._filteredOptions = this.filterService.filter(this.options as any[], this.searchFields(), this.filterValue, this.filterMatchMode, this.filterLocale);
+                filteredOptions = this.filterService.filter(this.options as any[], this.searchFields(), this.filterValue, this.filterMatchMode, this.filterLocale);
             }
+
+            this._filteredOptions = filteredOptions;
         } else {
             this._filteredOptions = null;
         }
     }
+
 
     hasFocusableElements() {
         return DomHandler.getFocusableElements(this.overlayViewChild.overlayViewChild.nativeElement, ':not([data-p-hidden-focusable="true"])').length > 0;
