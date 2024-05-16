@@ -552,42 +552,27 @@ export class Dialog implements AfterContentInit, OnInit, OnDestroy {
     }
 
     ngAfterContentInit() {
+        const templateMapping: { [key: string]: TemplateRef<any> } = {
+            'header': this.headerTemplate,
+            'content': this.contentTemplate,
+            'footer': this.footerTemplate,
+            'closeicon': this.closeIconTemplate,
+            'maximizeicon': this.maximizeIconTemplate,
+            'minimizeicon': this.minimizeIconTemplate,
+            'headless': this.headlessTemplate,
+        };
+    
         this.templates?.forEach((item) => {
-            switch (item.getType()) {
-                case 'header':
-                    this.headerTemplate = item.template;
-                    break;
-
-                case 'content':
-                    this.contentTemplate = item.template;
-                    break;
-
-                case 'footer':
-                    this.footerTemplate = item.template;
-                    break;
-
-                case 'closeicon':
-                    this.closeIconTemplate = item.template;
-                    break;
-
-                case 'maximizeicon':
-                    this.maximizeIconTemplate = item.template;
-                    break;
-
-                case 'minimizeicon':
-                    this.minimizeIconTemplate = item.template;
-                    break;
-
-                case 'headless':
-                    this.headlessTemplate = item.template;
-                    break;
-
-                default:
-                    this.contentTemplate = item.template;
-                    break;
+            const templateType = item.getType();
+            const template = templateMapping[templateType];
+            if (template) {
+                templateMapping[templateType] = item.template;
+            } else {
+                this.contentTemplate = item.template;
             }
         });
     }
+    
 
     ngOnInit() {
         if (this.breakpoints) {
@@ -712,30 +697,42 @@ export class Dialog implements AfterContentInit, OnInit, OnDestroy {
     }
 
     onKeydown(event: KeyboardEvent) {
-        if (this.focusTrap) {
-            if (event.which === 9) {
-                event.preventDefault();
-
-                let focusableElements = DomHandler.getFocusableElements(this.container as HTMLDivElement);
-
-                if (focusableElements && focusableElements.length > 0) {
-                    if (!focusableElements[0].ownerDocument.activeElement) {
-                        focusableElements[0].focus();
-                    } else {
-                        let focusedIndex = focusableElements.indexOf(focusableElements[0].ownerDocument.activeElement);
-
-                        if (event.shiftKey) {
-                            if (focusedIndex == -1 || focusedIndex === 0) focusableElements[focusableElements.length - 1].focus();
-                            else focusableElements[focusedIndex - 1].focus();
-                        } else {
-                            if (focusedIndex == -1 || focusedIndex === focusableElements.length - 1) focusableElements[0].focus();
-                            else focusableElements[focusedIndex + 1].focus();
-                        }
-                    }
-                }
+        if (!this.focusTrap || event.which !== 9) {
+            return;
+        }
+    
+        event.preventDefault();
+    
+        const focusableElements = DomHandler.getFocusableElements(this.container as HTMLDivElement);
+    
+        if (focusableElements && focusableElements.length > 0) {
+            const activeElement = focusableElements[0].ownerDocument.activeElement as HTMLElement | null;
+            const focusedIndex = activeElement ? focusableElements.indexOf(activeElement) : -1;
+    
+            if (event.shiftKey) {
+                this.focusPreviousElement(focusedIndex, focusableElements);
+            } else {
+                this.focusNextElement(focusedIndex, focusableElements);
             }
         }
     }
+    
+    private focusPreviousElement(currentIndex: number, elements: HTMLElement[]) {
+        if (currentIndex === -1 || currentIndex === 0) {
+            elements[elements.length - 1].focus();
+        } else {
+            elements[currentIndex - 1].focus();
+        }
+    }
+    
+    private focusNextElement(currentIndex: number, elements: HTMLElement[]) {
+        if (currentIndex === -1 || currentIndex === elements.length - 1) {
+            elements[0].focus();
+        } else {
+            elements[currentIndex + 1].focus();
+        }
+    }
+    
 
     onDrag(event: MouseEvent) {
         if (this.dragging) {
@@ -809,43 +806,73 @@ export class Dialog implements AfterContentInit, OnInit, OnDestroy {
     }
 
     onResize(event: MouseEvent) {
-        if (this.resizing) {
-            let deltaX = event.pageX - (this.lastPageX as number);
-            let deltaY = event.pageY - (this.lastPageY as number);
-            let containerWidth = DomHandler.getOuterWidth(this.container);
-            let containerHeight = DomHandler.getOuterHeight(this.container);
-            let contentHeight = DomHandler.getOuterHeight(this.contentViewChild?.nativeElement);
-            let newWidth = containerWidth + deltaX;
-            let newHeight = containerHeight + deltaY;
-            let minWidth = (this.container as HTMLDivElement).style.minWidth;
-            let minHeight = (this.container as HTMLDivElement).style.minHeight;
-            let offset = (this.container as HTMLDivElement).getBoundingClientRect();
-            let viewport = DomHandler.getViewport();
-            let hasBeenDragged = !parseInt((this.container as HTMLDivElement).style.top) || !parseInt((this.container as HTMLDivElement).style.left);
-
-            if (hasBeenDragged) {
-                newWidth += deltaX;
-                newHeight += deltaY;
-            }
-            const or1 = (!minWidth || newWidth > parseInt(minWidth)) && offset.left + newWidth < viewport.width;
-            if (or1) {
-                this._style.width = newWidth + 'px';
-                (this.container as HTMLDivElement).style.width = this._style.width;
-            }
-            const or2 = (!minHeight || newHeight > parseInt(minHeight)) && offset.top + newHeight < viewport.height;
-            if (or2) {
-                (<ElementRef>this.contentViewChild).nativeElement.style.height = contentHeight + newHeight - containerHeight + 'px';
-
-                if (this._style.height) {
-                    this._style.height = newHeight + 'px';
-                    (this.container as HTMLDivElement).style.height = this._style.height;
-                }
-            }
-
-            this.lastPageX = event.pageX;
-            this.lastPageY = event.pageY;
+        if (!this.resizing) {
+            return;
+        }
+    
+        const deltaX = event.pageX - (this.lastPageX as number);
+        const deltaY = event.pageY - (this.lastPageY as number);
+        const containerWidth = DomHandler.getOuterWidth(this.container);
+        const containerHeight = DomHandler.getOuterHeight(this.container);
+        const contentHeight = DomHandler.getOuterHeight(this.contentViewChild?.nativeElement);
+        let newWidth = containerWidth + deltaX;
+        let newHeight = containerHeight + deltaY;
+        const offset = (this.container as HTMLDivElement).getBoundingClientRect();
+        const viewport = DomHandler.getViewport();
+        const minWidth = parseInt((this.container as HTMLDivElement).style.minWidth || '0');
+        const minHeight = parseInt((this.container as HTMLDivElement).style.minHeight || '0');
+    
+        const hasBeenDraggedX = this.hasBeenDraggedX();
+        const hasBeenDraggedY = this.hasBeenDraggedY();
+    
+        if (hasBeenDraggedX || hasBeenDraggedY) {
+            newWidth += deltaX;
+            newHeight += deltaY;
+        }
+    
+        if (this.shouldUpdateWidth(newWidth, minWidth, offset, viewport.width)) {
+            this.updateWidth(newWidth);
+        }
+    
+        if (this.shouldUpdateHeight(newHeight, minHeight, offset, viewport.height)) {
+            this.updateHeight(newHeight, containerHeight, contentHeight);
+        }
+    
+        this.lastPageX = event.pageX;
+        this.lastPageY = event.pageY;
+    }
+    
+    private hasBeenDraggedX(): boolean {
+        return !parseInt((this.container as HTMLDivElement).style.left || '0');
+    }
+    
+    private hasBeenDraggedY(): boolean {
+        return !parseInt((this.container as HTMLDivElement).style.top || '0');
+    }
+    
+    private shouldUpdateWidth(newWidth: number, minWidth: number, offset: DOMRect, viewportWidth: number): boolean {
+        return (!minWidth || newWidth > minWidth) && offset.left + newWidth < viewportWidth;
+    }
+    
+    private updateWidth(newWidth: number) {
+        this._style.width = newWidth + 'px';
+        (this.container as HTMLDivElement).style.width = this._style.width;
+    }
+    
+    private shouldUpdateHeight(newHeight: number, minHeight: number, offset: DOMRect, viewportHeight: number): boolean {
+        return (!minHeight || newHeight > minHeight) && offset.top + newHeight < viewportHeight;
+    }
+    
+    private updateHeight(newHeight: number, containerHeight: number, contentHeight: number) {
+        (<ElementRef>this.contentViewChild).nativeElement.style.height = contentHeight + newHeight - containerHeight + 'px';
+    
+        if (this._style.height) {
+            this._style.height = newHeight + 'px';
+            (this.container as HTMLDivElement).style.height = this._style.height;
         }
     }
+    
+    
 
     resizeEnd(event: MouseEvent) {
         if (this.resizing) {

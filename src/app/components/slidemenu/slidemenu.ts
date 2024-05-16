@@ -728,66 +728,39 @@ export class SlideMenu implements OnInit, AfterContentInit, OnDestroy {
     }
 
     onKeyDown(event: KeyboardEvent) {
-        if (!this.transition) {
-            const metaKey = event.metaKey || event.ctrlKey;
-            switch (event.code) {
-                case 'ArrowDown':
-                    this.onArrowDownKey(event);
-                    break;
-
-                case 'ArrowUp':
-                    this.onArrowUpKey(event);
-                    break;
-
-                case 'ArrowLeft':
-                    this.onArrowLeftKey(event);
-                    break;
-
-                case 'ArrowRight':
-                    this.onArrowRightKey(event);
-                    break;
-
-                case 'Home':
-                    this.onHomeKey(event);
-                    break;
-
-                case 'End':
-                    this.onEndKey(event);
-                    break;
-
-                case 'Space':
-                    this.onSpaceKey(event);
-                    break;
-
-                case 'Enter':
-                    this.onEnterKey(event);
-                    break;
-
-                case 'Escape':
-                    this.onEscapeKey(event);
-                    break;
-
-                case 'Tab':
-                    this.onTabKey(event);
-                    break;
-
-                case 'PageDown':
-                case 'PageUp':
-                case 'Backspace':
-                case 'ShiftLeft':
-                case 'ShiftRight':
-                    //NOOP
-                    break;
-
-                default:
-                    if (!metaKey && ObjectUtils.isPrintableCharacter(event.key)) {
-                        this.searchItems(event, event.key);
-                    }
-
-                    break;
-            }
+        if (this.transition) {
+            return;
+        }
+    
+        const metaKey = event.metaKey || event.ctrlKey;
+    
+        const keyActions: { [key: string]: () => void } = {
+            'ArrowDown': () => this.onArrowDownKey(event),
+            'ArrowUp': () => this.onArrowUpKey(event),
+            'ArrowLeft': () => this.onArrowLeftKey(event),
+            'ArrowRight': () => this.onArrowRightKey(event),
+            'Home': () => this.onHomeKey(event),
+            'End': () => this.onEndKey(event),
+            'Space': () => this.onSpaceKey(event),
+            'Enter': () => this.onEnterKey(event),
+            'Escape': () => this.onEscapeKey(event),
+            'Tab': () => this.onTabKey(event),
+        };
+    
+        const keyAction = keyActions[event.code];
+        if (keyAction) {
+            keyAction();
+        } else {
+            this.handleOtherKeys(event, metaKey);
         }
     }
+    
+    private handleOtherKeys(event: KeyboardEvent, metaKey: boolean) {
+        if (!metaKey && ObjectUtils.isPrintableCharacter(event.key)) {
+            this.searchItems(event, event.key);
+        }
+    }
+    
 
     onNavigationKeyDown(event: KeyboardEvent) {
         switch (event.code) {
@@ -1147,40 +1120,49 @@ export class SlideMenu implements OnInit, AfterContentInit, OnDestroy {
 
     searchItems(event: any, char: string) {
         this.searchValue = (this.searchValue || '') + char;
-
-        let itemIndex = -1;
-        let matched = false;
-
-        if (this.focusedItemInfo().index !== -1) {
-            itemIndex = this.visibleItems.slice(this.focusedItemInfo().index).findIndex((processedItem) => this.isItemMatched(processedItem));
-            itemIndex = itemIndex === -1 ? this.visibleItems.slice(0, this.focusedItemInfo().index).findIndex((processedItem) => this.isItemMatched(processedItem)) : itemIndex + this.focusedItemInfo().index;
-        } else {
-            itemIndex = this.visibleItems.findIndex((processedItem) => this.isItemMatched(processedItem));
+    
+        const matchedItemIndex = this.findMatchedItemIndex();
+        if (matchedItemIndex !== -1) {
+            this.changeFocusedItemIndex(event, matchedItemIndex);
         }
-
-        if (itemIndex !== -1) {
-            matched = true;
+    
+        this.resetSearchTimeout();
+    
+        return matchedItemIndex !== -1;
+    }
+    
+    private findMatchedItemIndex(): number {
+        const focusedItemInfo = this.focusedItemInfo();
+        const startIndex = focusedItemInfo.index !== -1 ? focusedItemInfo.index : 0;
+    
+        for (let i = startIndex; i < this.visibleItems.length; i++) {
+            if (this.isItemMatched(this.visibleItems[i])) {
+                return i;
+            }
         }
-
-        if (itemIndex === -1 && this.focusedItemInfo().index === -1) {
-            itemIndex = this.findFirstFocusedItemIndex();
+    
+        if (startIndex !== 0) {
+            for (let i = 0; i < startIndex; i++) {
+                if (this.isItemMatched(this.visibleItems[i])) {
+                    return i;
+                }
+            }
         }
-
-        if (itemIndex !== -1) {
-            this.changeFocusedItemIndex(event, itemIndex);
-        }
-
+    
+        return this.findFirstFocusedItemIndex();
+    }
+    
+    private resetSearchTimeout() {
         if (this.searchTimeout) {
             clearTimeout(this.searchTimeout);
         }
-
+    
         this.searchTimeout = setTimeout(() => {
             this.searchValue = '';
             this.searchTimeout = null;
         }, 500);
-
-        return matched;
     }
+    
 
     findVisibleItem(index) {
         return ObjectUtils.isNotEmpty(this.visibleItems) ? this.visibleItems[index] : null;
@@ -1250,27 +1232,42 @@ export class SlideMenu implements OnInit, AfterContentInit, OnDestroy {
     }
 
     bindOutsideClickListener() {
-        if (isPlatformBrowser(this.platformId)) {
-            if (!this.outsideClickListener) {
-                this.outsideClickListener = this.renderer.listen(this.document, 'click', (event) => {
-                    const isOutsideContainer = this.containerViewChild && !this.containerViewChild.nativeElement.contains(event.target);
-                    const isOutsideTarget = this.popup ? !(this.target && (this.target === event.target || this.target.contains(event.target))) : true;
-
-                    if (this.popup) {
-                        if (isOutsideContainer && isOutsideTarget) {
-                            this.onMenuBlur();
-                            this.hide();
-                        }
-                    } else {
-                        const a1 = isOutsideContainer && isOutsideTarget && this.focused;
-                        if (a1) {
-                            this.onMenuBlur();
-                        }
-                    }
-                });
+        if (!isPlatformBrowser(this.platformId)) {
+            return;
+        }
+    
+        if (!this.outsideClickListener) {
+            this.outsideClickListener = this.renderer.listen(this.document, 'click', (event) => {
+                this.handleOutsideClick(event);
+            });
+        }
+    }
+    
+    private handleOutsideClick(event: MouseEvent) {
+        const isOutsideContainer = this.isClickOutsideContainer(event);
+        const isOutsideTarget = this.isClickOutsideTarget(event);
+    
+        if (this.popup) {
+            if (isOutsideContainer && isOutsideTarget) {
+                this.onMenuBlur();
+                this.hide();
+            }
+        } else {
+            const isClickOutside = isOutsideContainer && isOutsideTarget && this.focused;
+            if (isClickOutside) {
+                this.onMenuBlur();
             }
         }
     }
+    
+    private isClickOutsideContainer(event: MouseEvent): boolean {
+        return this.containerViewChild && !this.containerViewChild.nativeElement.contains(event.target);
+    }
+    
+    private isClickOutsideTarget(event: MouseEvent): boolean {
+        return this.popup ? !(this.target && (this.target === event.target || this.target.contains(event.target))) : true;
+    }
+    
 
     unbindOutsideClickListener() {
         if (this.outsideClickListener) {

@@ -1147,74 +1147,30 @@ export class MultiSelect implements OnInit, AfterViewInit, AfterContentInit, Aft
     }
 
     ngAfterContentInit() {
+        const templateMap: { [key: string]: (template: TemplateRef<any>) => void } = {
+            'item': (template) => this.itemTemplate = template,
+            'group': (template) => this.groupTemplate = template,
+            'selectedItems': (template) => this.selectedItemsTemplate = template,
+            'header': (template) => this.headerTemplate = template,
+            'filter': (template) => this.filterTemplate = template,
+            'emptyfilter': (template) => this.emptyFilterTemplate = template,
+            'empty': (template) => this.emptyTemplate = template,
+            'footer': (template) => this.footerTemplate = template,
+            'loader': (template) => this.loaderTemplate = template,
+            'checkicon': (template) => this.checkIconTemplate = template,
+            'filtericon': (template) => this.filterIconTemplate = template,
+            'removetokenicon': (template) => this.removeTokenIconTemplate = template,
+            'closeicon': (template) => this.closeIconTemplate = template,
+            'clearicon': (template) => this.clearIconTemplate = template,
+            'dropdownicon': (template) => this.dropdownIconTemplate = template
+        };
+    
         (this.templates as QueryList<PrimeTemplate>).forEach((item) => {
-            switch (item.getType()) {
-                case 'item':
-                    this.itemTemplate = item.template;
-                    break;
-
-                case 'group':
-                    this.groupTemplate = item.template;
-                    break;
-
-                case 'selectedItems':
-                    this.selectedItemsTemplate = item.template;
-                    break;
-
-                case 'header':
-                    this.headerTemplate = item.template;
-                    break;
-
-                case 'filter':
-                    this.filterTemplate = item.template;
-                    break;
-
-                case 'emptyfilter':
-                    this.emptyFilterTemplate = item.template;
-                    break;
-
-                case 'empty':
-                    this.emptyTemplate = item.template;
-                    break;
-
-                case 'footer':
-                    this.footerTemplate = item.template;
-                    break;
-
-                case 'loader':
-                    this.loaderTemplate = item.template;
-                    break;
-
-                case 'checkicon':
-                    this.checkIconTemplate = item.template;
-                    break;
-
-                case 'filtericon':
-                    this.filterIconTemplate = item.template;
-                    break;
-
-                case 'removetokenicon':
-                    this.removeTokenIconTemplate = item.template;
-                    break;
-
-                case 'closeicon':
-                    this.closeIconTemplate = item.template;
-                    break;
-
-                case 'clearicon':
-                    this.clearIconTemplate = item.template;
-                    break;
-
-                case 'dropdownicon':
-                    this.dropdownIconTemplate = item.template;
-                    break;
-
-                default:
-                    this.itemTemplate = item.template;
-                    break;
-            }
+            const assignTemplate = templateMap[item.getType()] || ((template) => this.itemTemplate = template);
+            assignTemplate(item.template);
         });
     }
+    
 
 
     ngAfterViewInit() {
@@ -1476,116 +1432,75 @@ export class MultiSelect implements OnInit, AfterViewInit, AfterContentInit, Aft
             event.preventDefault();
             return;
         }
-
+    
         const metaKey = event.metaKey || event.ctrlKey;
-
-        switch (event.code) {
-            case 'ArrowDown':
-                this.onArrowDownKey(event);
-                break;
-
-            case 'ArrowUp':
-                this.onArrowUpKey(event);
-                break;
-
-            case 'Home':
-                this.onHomeKey(event);
-                break;
-
-            case 'End':
-                this.onEndKey(event);
-                break;
-
-            case 'PageDown':
-                this.onPageDownKey(event);
-                break;
-
-            case 'PageUp':
-                this.onPageUpKey(event);
-                break;
-
-            case 'Enter':
-            case 'Space':
-                this.onEnterKey(event);
-                break;
-
-            case 'Escape':
-                this.onEscapeKey(event);
-                break;
-
-            case 'Tab':
-                this.onTabKey(event);
-                break;
-
-            case 'ShiftLeft':
-            case 'ShiftRight':
-                this.onShiftKey();
-                break;
-
-            default:
-                if (event.code === 'KeyA' && metaKey) {
-                    const value = this.visibleOptions()
-                        .filter((option) => this.isValidOption(option))
-                        .map((option) => this.getOptionValue(option));
-
-                    this.updateModel(value, event);
-
-                    event.preventDefault();
-                    break;
-                }
-
-                if (!metaKey && ObjectUtils.isPrintableCharacter(event.key)) {
-                    !this.overlayVisible && this.show();
-                    this.searchOptions(event, event.key);
-                    event.preventDefault();
-                }
-
-                break;
+        const key = event.code || event.key;
+        const keyAction = this.getKeyAction(key, metaKey, event);
+    
+        if (keyAction) {
+            keyAction();
+        } else {
+            this.handleDefaultKey(event, metaKey);
         }
     }
-
-
+    
+    private getKeyAction(key: string, metaKey: boolean, event: KeyboardEvent): (() => void) | null {
+        const keyActions: { [key: string]: () => void } = {
+            'ArrowDown': () => this.onArrowDownKey(event),
+            'ArrowUp': () => this.onArrowUpKey(event),
+            'Home': () => this.onHomeKey(event),
+            'End': () => this.onEndKey(event),
+            'PageDown': () => this.onPageDownKey(event),
+            'PageUp': () => this.onPageUpKey(event),
+            'Enter': () => this.onEnterKey(event),
+            'Space': () => this.onEnterKey(event), // Space performs the same action as Enter
+            'Escape': () => this.onEscapeKey(event),
+            'Tab': () => this.onTabKey(event),
+            'ShiftLeft': () => this.onShiftKey(),
+            'ShiftRight': () => this.onShiftKey(),
+        };
+    
+        return keyActions[key] || (metaKey && key === 'KeyA' ? () => this.handleMetaKeyA(event) : null);
+    }
+    
+    private handleDefaultKey(event: KeyboardEvent, metaKey: boolean) {
+        if (!metaKey && ObjectUtils.isPrintableCharacter(event.key)) {
+            !this.overlayVisible && this.show();
+            this.searchOptions(event, event.key);
+            event.preventDefault();
+        }
+    }
+    
+    private handleMetaKeyA(event: KeyboardEvent) {
+        const value = this.visibleOptions()
+            .filter((option) => this.isValidOption(option))
+            .map((option) => this.getOptionValue(option));
+    
+        this.updateModel(value, event);
+    
+        event.preventDefault();
+    }
 
     onFilterKeyDown(event: KeyboardEvent) {
-        switch (event.code) {
-            case 'ArrowDown':
-                this.onArrowDownKey(event);
-                break;
-
-            case 'ArrowUp':
-                this.onArrowUpKey(event, true);
-                break;
-
-            case 'ArrowLeft':
-            case 'ArrowRight':
-                this.onArrowLeftKey(event, true);
-                break;
-
-            case 'Home':
-                this.onHomeKey(event, true);
-                break;
-
-            case 'End':
-                this.onEndKey(event, true);
-                break;
-
-            case 'Enter':
-            case 'NumpadEnter':
-                this.onEnterKey(event);
-                break;
-
-            case 'Escape':
-                this.onEscapeKey(event);
-                break;
-
-            case 'Tab':
-                this.onTabKey(event, true);
-                break;
-
-            default:
-                break;
+        const keyActions: { [key: string]: (event: KeyboardEvent, additionalParam?: boolean) => void } = {
+            'ArrowDown': () => this.onArrowDownKey(event),
+            'ArrowUp': () => this.onArrowUpKey(event, true),
+            'ArrowLeft': () => this.onArrowLeftKey(event, true),
+            'ArrowRight': () => this.onArrowLeftKey(event, true), // Assuming same action as ArrowLeft
+            'Home': () => this.onHomeKey(event, true),
+            'End': () => this.onEndKey(event, true),
+            'Enter': () => this.onEnterKey(event),
+            'NumpadEnter': () => this.onEnterKey(event), // Assuming same action as Enter
+            'Escape': () => this.onEscapeKey(event),
+            'Tab': () => this.onTabKey(event, true),
+        };
+    
+        const keyAction = keyActions[event.code];
+        if (keyAction) {
+            keyAction(event);
         }
     }
+    
 
 
     onArrowLeftKey(event: KeyboardEvent, pressedInInputText: boolean = false) {
@@ -1979,18 +1894,36 @@ export class MultiSelect implements OnInit, AfterViewInit, AfterContentInit, Aft
     }
 
     scrollInView(index = -1) {
-        const id = index !== -1 ? `${this.id}_${index}` : this.focusedOptionId;
+        const id = this.getIdToScroll(index);
+    
         if (this.itemsViewChild && this.itemsViewChild.nativeElement) {
-            const element = DomHandler.findSingle(this.itemsViewChild.nativeElement, `li[id="${id}"]`);
+            const element = this.findScrollElement(id);
             if (element) {
-                element.scrollIntoView && element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                this.scrollElementIntoView(element);
             } else if (!this.virtualScrollerDisabled) {
-                setTimeout(() => {
-                    this.virtualScroll && this.scroller?.scrollToIndex(index !== -1 ? index : this.focusedOptionIndex());
-                }, 0);
+                this.scrollToIndexOrFocusedOption(index);
             }
         }
     }
+    
+    private getIdToScroll(index: number): string {
+        return index !== -1 ? `${this.id}_${index}` : this.focusedOptionId;
+    }
+    
+    private findScrollElement(id: string): HTMLElement | null {
+        return DomHandler.findSingle(this.itemsViewChild.nativeElement, `li[id="${id}"]`);
+    }
+    
+    private scrollElementIntoView(element: HTMLElement) {
+        element.scrollIntoView && element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+    
+    private scrollToIndexOrFocusedOption(index: number) {
+        setTimeout(() => {
+            this.virtualScroll && this.scroller?.scrollToIndex(index !== -1 ? index : this.focusedOptionIndex());
+        }, 0);
+    }
+    
 
     get focusedOptionId() {
         return this.focusedOptionIndex() !== -1 ? `${this.id}_${this.focusedOptionIndex()}` : null;

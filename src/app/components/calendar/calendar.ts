@@ -1236,48 +1236,25 @@ set content(content: ElementRef) {
 }
 
 setTemplateByType(template, type) {
-  switch(type) {
-    case 'date':
-      this.setDateTemplate(template);
-      break;
-    case 'decade':
-      this.setDecadeTemplate(template);
-      break;         
-    case 'disabledDate':
-      this.setDisabledDateTemplate(template);
-      break;
-    case 'header':
-       this.setHeaderTemplate(template);
-      break;
-    case 'inputicon':
-      this.setInputIconTemplate(template);
-      break;
-    case 'previousicon':
-      this.setPreviousIconTemplate(template);
-      break;
-    case 'nexticon':  
-       this.setNextIconTemplate(template);
-      break;
-    case 'triggericon':
-      this.setTriggerIconTemplate(template);
-      break;
-    case 'clearicon':
-      this.setClearIconTemplate(template);
-      break;
-    case 'decrementicon':
-      this.setDecrementIconTemplate(template);
-      break;
-    case 'incrementicon':
-      this.setIncrementIconTemplate(template);
-      break;
-    case 'footer':
-      this.setFooterTemplate(template);
-      break;
-    default:
-      this.setDateTemplate(template);
-      break;
+    const templateSetters = {
+      'date': this.setDateTemplate,
+      'decade': this.setDecadeTemplate,
+      'disabledDate': this.setDisabledDateTemplate,
+      'header': this.setHeaderTemplate,
+      'inputicon': this.setInputIconTemplate,
+      'previousicon': this.setPreviousIconTemplate,
+      'nexticon': this.setNextIconTemplate,
+      'triggericon': this.setTriggerIconTemplate,
+      'clearicon': this.setClearIconTemplate,
+      'decrementicon': this.setDecrementIconTemplate,
+      'incrementicon': this.setIncrementIconTemplate,
+      'footer': this.setFooterTemplate,
+    };
+  
+    const templateSetter = templateSetters[type] || this.setDateTemplate;
+    templateSetter.call(this, template);
   }
-}
+  
 
 setDateTemplate(template) {
   this.dateTemplate = template.template;
@@ -2781,46 +2758,80 @@ trapFocus(event: any) {
         return hours;
     };
 
-    constrainTime(hour: number, minute: number, second: number, pm: boolean) {
-        let returnTimeTriple: number[] = [ hour, minute, second ]
-        let value = this.value;
+    constrainTime(hour: number, minute: number, second: number, pm: boolean): number[] {
         const convertedHour = this.convertTo24Hour(hour, pm);
-        const isRange = this.isRangeSelection(),
-            isMultiple = this.isMultipleSelection(),
-            isMultiValue = isRange || isMultiple;
-
-        if (isMultiValue) {
-            if (!this.value) {
-                this.value = [new Date(), new Date()];
-            }
-            if (isRange) {
-                value = this.value[1] || this.value[0];
-            }
-            if (isMultiple) {
-                value = this.value[this.value.length - 1];
-            }
+        const [isMinDate, minDate] = this.checkMinDateConstraints(convertedHour, minute, second);
+        const [isMaxDate, maxDate] = this.checkMaxDateConstraints(convertedHour, minute, second);
+    
+        let returnTimeTriple = [hour, minute, second];
+    
+        if (isMinDate) {
+            returnTimeTriple = this.applyMinDateConstraints(returnTimeTriple, minDate, convertedHour);
+        } else if (isMaxDate) {
+            returnTimeTriple = this.applyMaxDateConstraints(returnTimeTriple, maxDate, convertedHour);
         }
-        const valueDateString = value ? value.toDateString() : null;
-        let isMinDate = this.minDate && valueDateString && this.minDate.toDateString() === valueDateString;
-        let isMaxDate = this.maxDate && valueDateString && this.maxDate.toDateString() === valueDateString;
-        switch (true) { // intentional fall through
-            case isMinDate && this.minDate.getHours() > convertedHour:
-                returnTimeTriple[0] = this.minDate.getHours();
-            case isMinDate && this.minDate.getHours() === convertedHour && this.minDate.getMinutes() > minute:
-                returnTimeTriple[1] = this.minDate.getMinutes();
-            case isMinDate && this.minDate.getHours() === convertedHour && this.minDate.getMinutes() === minute && this.minDate.getSeconds() > second:
-                returnTimeTriple[2] = this.minDate.getSeconds();
-                break;
-            case isMaxDate && this.maxDate.getHours() < convertedHour:
-                returnTimeTriple[0] = this.maxDate.getHours();
-            case isMaxDate && this.maxDate.getHours() === convertedHour && this.maxDate.getMinutes() < minute:
-                returnTimeTriple[1] = this.maxDate.getMinutes();
-            case isMaxDate && this.maxDate.getHours() === convertedHour && this.maxDate.getMinutes() === minute && this.maxDate.getSeconds() < second:
-                returnTimeTriple[2] = this.maxDate.getSeconds();
-                break;
-        }
+    
         return returnTimeTriple;
     }
+    
+    private checkMinDateConstraints(hour: number, minute: number, second: number): [boolean, Date | null] {
+        let value = this.getValueForComparison();
+        if (!this.minDate || !value) return [false, null];
+    
+        const isMinDate = this.minDate.toDateString() === value.toDateString();
+        return [isMinDate, isMinDate ? this.minDate : null];
+    }
+    
+    private checkMaxDateConstraints(hour: number, minute: number, second: number): [boolean, Date | null] {
+        let value = this.getValueForComparison();
+        if (!this.maxDate || !value) return [false, null];
+    
+        const isMaxDate = this.maxDate.toDateString() === value.toDateString();
+        return [isMaxDate, isMaxDate ? this.maxDate : null];
+    }
+    
+    private getValueForComparison(): Date | null {
+        if (!this.value) return null;
+    
+        if (this.isRangeSelection()) {
+            return this.value[1] || this.value[0];
+        } else if (this.isMultipleSelection()) {
+            return this.value[this.value.length - 1];
+        }
+    
+        return this.value;
+    }
+    
+    private applyMinDateConstraints(time: number[], minDate: Date, hour: number): number[] {
+        if (minDate.getHours() > hour) {
+            time[0] = minDate.getHours();
+        }
+        if (minDate.getHours() === hour) {
+            if (minDate.getMinutes() > time[1]) {
+                time[1] = minDate.getMinutes();
+            }
+            if (minDate.getMinutes() === time[1] && minDate.getSeconds() > time[2]) {
+                time[2] = minDate.getSeconds();
+            }
+        }
+        return time;
+    }
+    
+    private applyMaxDateConstraints(time: number[], maxDate: Date, hour: number): number[] {
+        if (maxDate.getHours() < hour) {
+            time[0] = maxDate.getHours();
+        }
+        if (maxDate.getHours() === hour) {
+            if (maxDate.getMinutes() < time[1]) {
+                time[1] = maxDate.getMinutes();
+            }
+            if (maxDate.getMinutes() === time[1] && maxDate.getSeconds() < time[2]) {
+                time[2] = maxDate.getSeconds();
+            }
+        }
+        return time;
+    }
+    
 
     incrementHour(event: any) {
         const prevHour = this.currentHour ?? 0;
