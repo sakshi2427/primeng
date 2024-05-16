@@ -819,90 +819,40 @@ export class PickList implements AfterViewChecked, AfterContentInit {
     }
 
     ngAfterContentInit() {
+        const templateMapping = {
+            'item': 'itemTemplate',
+            'sourceHeader': 'sourceHeaderTemplate',
+            'targetHeader': 'targetHeaderTemplate',
+            'sourceFilter': 'sourceFilterTemplate',
+            'targetFilter': 'targetFilterTemplate',
+            'emptymessagesource': 'emptyMessageSourceTemplate',
+            'emptyfiltermessagesource': 'emptyFilterMessageSourceTemplate',
+            'emptymessagetarget': 'emptyMessageTargetTemplate',
+            'emptyfiltermessagetarget': 'emptyFilterMessageTargetTemplate',
+            'moveupicon': 'moveUpIconTemplate',
+            'movetopicon': 'moveTopIconTemplate',
+            'movedownicon': 'moveDownIconTemplate',
+            'movebottomicon': 'moveBottomIconTemplate',
+            'movetotargeticon': 'moveToTargetIconTemplate',
+            'movealltotargeticon': 'moveAllToTargetIconTemplate',
+            'movetosourceicon': 'moveToSourceIconTemplate',
+            'movealltosourceicon': 'moveAllToSourceIconTemplate',
+            'targetfiltericon': 'targetFilterIconTemplate',
+            'sourcefiltericon': 'sourceFilterIconTemplate'
+        };
+    
         (this.templates as QueryList<PrimeTemplate>).forEach((item) => {
-            switch (item.getType()) {
-                case 'item':
-                    this.itemTemplate = item.template;
-                    break;
-
-                case 'sourceHeader':
-                    this.sourceHeaderTemplate = item.template;
-                    break;
-
-                case 'targetHeader':
-                    this.targetHeaderTemplate = item.template;
-                    break;
-
-                case 'sourceFilter':
-                    this.sourceFilterTemplate = item.template;
-                    break;
-
-                case 'targetFilter':
-                    this.targetFilterTemplate = item.template;
-                    break;
-
-                case 'emptymessagesource':
-                    this.emptyMessageSourceTemplate = item.template;
-                    break;
-
-                case 'emptyfiltermessagesource':
-                    this.emptyFilterMessageSourceTemplate = item.template;
-                    break;
-
-                case 'emptymessagetarget':
-                    this.emptyMessageTargetTemplate = item.template;
-                    break;
-
-                case 'emptyfiltermessagetarget':
-                    this.emptyFilterMessageTargetTemplate = item.template;
-                    break;
-
-                case 'moveupicon':
-                    this.moveUpIconTemplate = item.template;
-                    break;
-
-                case 'movetopicon':
-                    this.moveTopIconTemplate = item.template;
-                    break;
-
-                case 'movedownicon':
-                    this.moveDownIconTemplate = item.template;
-                    break;
-
-                case 'movebottomicon':
-                    this.moveBottomIconTemplate = item.template;
-                    break;
-
-                case 'movetotargeticon':
-                    this.moveToTargetIconTemplate = item.template;
-                    break;
-
-                case 'movealltotargeticon':
-                    this.moveAllToTargetIconTemplate = item.template;
-                    break;
-
-                case 'movetosourceicon':
-                    this.moveToSourceIconTemplate = item.template;
-                    break;
-
-                case 'movealltosourceicon':
-                    this.moveAllToSourceIconTemplate = item.template;
-                    break;
-
-                case 'targetfiltericon':
-                    this.targetFilterIconTemplate = item.template;
-                    break;
-
-                case 'sourcefiltericon':
-                    this.sourceFilterIconTemplate = item.template;
-                    break;
-
-                default:
-                    this.itemTemplate = item.template;
-                    break;
+            const type = item.getType();
+            const property = templateMapping[type];
+    
+            if (property) {
+                this[property] = item.template;
+            } else {
+                this.itemTemplate = item.template;
             }
         });
     }
+    
 
     ngAfterViewChecked() {
         if (this.movedUp || this.movedDown) {
@@ -923,35 +873,54 @@ export class PickList implements AfterViewChecked, AfterContentInit {
         if (this.disabled) {
             return;
         }
-
-        let index = this.findIndexInList(item, selectedItems);
-        if (itemId) this.focusedOptionIndex = itemId;
-        let selected = index != -1;
-        let metaSelection = this.itemTouched ? false : this.metaKeySelection;
-
+    
+        const index = this.findIndexInList(item, selectedItems);
+        const selected = index !== -1;
+    
+        if (itemId) {
+            this.focusedOptionIndex = itemId;
+        }
+    
+        const metaSelection = this.itemTouched ? false : this.metaKeySelection;
+        const metaKey = this.getMetaKey(event);
+    
+        selectedItems = this.updateSelectedItems(selectedItems, item, selected, metaSelection, metaKey, index);
+    
+        this.setSelectionList(listType, selectedItems);
+        callback.emit({ originalEvent: event, items: selectedItems });
+    
+        this.itemTouched = false;
+    }
+    
+    getMetaKey(event: Event): boolean {
+        return (<KeyboardEvent>event).metaKey || (<KeyboardEvent>event).ctrlKey || (<KeyboardEvent>event).shiftKey;
+    }
+    
+    updateSelectedItems(selectedItems: any[], item: any, selected: boolean, metaSelection: boolean, metaKey: boolean, index: number): any[] {
         if (metaSelection) {
-            let metaKey = (<KeyboardEvent>event).metaKey || (<KeyboardEvent>event).ctrlKey || (<KeyboardEvent>event).shiftKey;
-
-            if (selected && metaKey) {
-                selectedItems = selectedItems.filter((_, i) => i !== index);
-            } else {
-                if (!metaKey) {
-                    selectedItems = [];
+            if (metaKey) {
+                if (selected) {
+                    return this.removeSelectedItem(selectedItems, index);
+                } else {
+                    return [...selectedItems, item];
                 }
-                selectedItems.push(item);
+            } else {
+                return [item];
             }
         } else {
             if (selected) {
-                selectedItems = selectedItems.filter((_, i) => i !== index); // Creating a new array without the selected item
+                return this.removeSelectedItem(selectedItems, index);
             } else {
-                selectedItems.push(item);
+                return [...selectedItems, item];
             }
         }
-        this.setSelectionList(listType, selectedItems);
-        callback.emit({ originalEvent: event, items: selectedItems });
-
-        this.itemTouched = false;
     }
+    
+    removeSelectedItem(selectedItems: any[], index: number): any[] {
+        return selectedItems.filter((_, i) => i !== index);
+    }
+    
+    
 
     onOptionMouseDown(index, listType: number) {
         this.focused[listType === this.SOURCE_LIST ? 'sourceList' : 'targetList'] = true;
@@ -1039,74 +1008,103 @@ export class PickList implements AfterViewChecked, AfterContentInit {
     moveUp(listElement: HTMLElement, list: any[], selectedItems: any[], callback: EventEmitter<any>, listType: number) {
         if (selectedItems && selectedItems.length) {
             selectedItems = this.sortByIndexInList(selectedItems, list);
-            for (let i = 0; i < selectedItems.length; i++) {
-                let selectedItem = selectedItems[i];
-                let selectedItemIndex: number = ObjectUtils.findIndexInList(selectedItem, list);
-
-                if (selectedItemIndex != 0) {
-                    let movedItem = list[selectedItemIndex];
-                    let temp = list[selectedItemIndex - 1];
-                    list[selectedItemIndex - 1] = movedItem;
-                    list[selectedItemIndex] = temp;
-                } else {
-                    break;
-                }
+            this.moveSelectedItemsUp(list, selectedItems);
+    
+            if (this.shouldFilter(listType)) {
+                this.filter(list, listType);
             }
-            const pl1 = this.dragdrop && ((this.filterValueSource && listType === this.SOURCE_LIST) || (this.filterValueTarget && listType === this.TARGET_LIST));
-            if (pl1) this.filter(list, listType);
-
+    
             this.movedUp = true;
             this.reorderedListElement = listElement;
             callback.emit({ items: selectedItems });
         }
     }
+    
+    moveSelectedItemsUp(list: any[], selectedItems: any[]) {
+        selectedItems.forEach(selectedItem => {
+            const selectedItemIndex: number = ObjectUtils.findIndexInList(selectedItem, list);
+            if (selectedItemIndex > 0) {
+                this.swapItems(list, selectedItemIndex, selectedItemIndex - 1);
+            }
+        });
+    }
+    
+    swapItems(list: any[], index1: number, index2: number) {
+        const temp = list[index1];
+        list[index1] = list[index2];
+        list[index2] = temp;
+    }
+    
+    shouldFilter(listType: number): boolean {
+        return this.dragdrop && ((this.filterValueSource && listType === this.SOURCE_LIST) || (this.filterValueTarget && listType === this.TARGET_LIST));
+    }
+    
 
     moveTop(listElement: HTMLElement, list: any[], selectedItems: any[], callback: EventEmitter<any>, listType: number) {
         if (selectedItems && selectedItems.length) {
             selectedItems = this.sortByIndexInList(selectedItems, list);
-            for (let i = 0; i < selectedItems.length; i++) {
-                let selectedItem = selectedItems[i];
-                let selectedItemIndex: number = ObjectUtils.findIndexInList(selectedItem, list);
-
-                if (selectedItemIndex != 0) {
-                    let movedItem = list.splice(selectedItemIndex, 1)[0];
-                    list.unshift(movedItem);
-                } else {
-                    break;
-                }
+            this.moveSelectedItemsToTop(list, selectedItems);
+    
+            if (this.isFilteringRequired(listType)) {
+                this.filter(list, listType);
             }
-            const pl2 = this.dragdrop && ((this.filterValueSource && listType === this.SOURCE_LIST) || (this.filterValueTarget && listType === this.TARGET_LIST));
-            if (pl2) this.filter(list, listType);
-
+    
             listElement.scrollTop = 0;
             callback.emit({ items: selectedItems });
         }
     }
+    
+    moveSelectedItemsToTop(list: any[], selectedItems: any[]) {
+        selectedItems.forEach(selectedItem => {
+            const selectedItemIndex: number = ObjectUtils.findIndexInList(selectedItem, list);
+            if (selectedItemIndex > 0) {
+                const movedItem = list.splice(selectedItemIndex, 1)[0];
+                list.unshift(movedItem);
+            }
+        });
+    }
+    
+    isFilteringRequired(listType: number): boolean {
+        return this.dragdrop && ((this.filterValueSource && listType === this.SOURCE_LIST) || (this.filterValueTarget && listType === this.TARGET_LIST));
+    }
+    
 
     moveDown(listElement: HTMLElement, list: any[], selectedItems: any[], callback: EventEmitter<any>, listType: number) {
         if (selectedItems && selectedItems.length) {
             selectedItems = this.sortByIndexInList(selectedItems, list);
-            for (let i = selectedItems.length - 1; i >= 0; i--) {
-                let selectedItem = selectedItems[i];
-                let selectedItemIndex: number = ObjectUtils.findIndexInList(selectedItem, list);
-
-                if (selectedItemIndex != list.length - 1) {
-                    let movedItem = list[selectedItemIndex];
-                    let temp = list[selectedItemIndex + 1];
-                    list[selectedItemIndex + 1] = movedItem;
-                    list[selectedItemIndex] = temp;
-                } else {
-                    break;
-                }
+            this.moveSelectedItemsDown(list, selectedItems);
+    
+            if (this.isFilterRequiredForMove(listType)) {
+                this.filter(list, listType);
             }
-            const pl3 = this.dragdrop && ((this.filterValueSource && listType === this.SOURCE_LIST) || (this.filterValueTarget && listType === this.TARGET_LIST));
-            if (pl3) this.filter(list, listType);
-
-            this.movedDown = true;
-            this.reorderedListElement = listElement;
+    
+            this.markAsMovedDown(listElement);
             callback.emit({ items: selectedItems });
         }
     }
+    
+    moveSelectedItemsDown(list: any[], selectedItems: any[]) {
+        for (let i = selectedItems.length - 1; i >= 0; i--) {
+            const selectedItem = selectedItems[i];
+            const selectedItemIndex: number = ObjectUtils.findIndexInList(selectedItem, list);
+    
+            if (selectedItemIndex < list.length - 1) {
+                const movedItem = list[selectedItemIndex];
+                list[selectedItemIndex] = list[selectedItemIndex + 1];
+                list[selectedItemIndex + 1] = movedItem;
+            }
+        }
+    }
+    
+    isFilterRequiredForMove(listType: number): boolean {
+        return this.dragdrop && ((this.filterValueSource && listType === this.SOURCE_LIST) || (this.filterValueTarget && listType === this.TARGET_LIST));
+    }
+    
+    markAsMovedDown(listElement: HTMLElement) {
+        this.movedDown = true;
+        this.reorderedListElement = listElement;
+    }
+    
 
     moveBottom(listElement: HTMLElement, list: any[], selectedItems: any[], callback: EventEmitter<any>, listType: number) {
         if (selectedItems && selectedItems.length) {

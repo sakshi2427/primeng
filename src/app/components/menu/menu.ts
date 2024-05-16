@@ -548,44 +548,33 @@ export class Menu implements OnDestroy {
     }
 
     onListKeyDown(event) {
-        switch (event.code) {
-            case 'ArrowDown':
-                this.onArrowDownKey(event);
-                break;
-
-            case 'ArrowUp':
-                this.onArrowUpKey(event);
-                break;
-
-            case 'Home':
-                this.onHomeKey(event);
-                break;
-
-            case 'End':
-                this.onEndKey(event);
-                break;
-
-            case 'Enter':
-                this.onEnterKey(event);
-                break;
-
-            case 'Space':
-                this.onSpaceKey(event);
-                break;
-
-            case 'Escape':
-            case 'Tab':
-                if (this.popup) {
-                    DomHandler.focus(this.target);
-                    this.hide();
-                }
-                this.overlayVisible && this.hide();
-                break;
-
-            default:
-                break;
+        const keyHandlers = {
+            'ArrowDown': this.onArrowDownKey.bind(this),
+            'ArrowUp': this.onArrowUpKey.bind(this),
+            'Home': this.onHomeKey.bind(this),
+            'End': this.onEndKey.bind(this),
+            'Enter': this.onEnterKey.bind(this),
+            'Space': this.onSpaceKey.bind(this),
+            'Escape': this.handleEscapeOrTabKey.bind(this),
+            'Tab': this.handleEscapeOrTabKey.bind(this),
+        };
+    
+        const handler = keyHandlers[event.code];
+        if (handler) {
+            handler(event);
         }
     }
+    
+    handleEscapeOrTabKey(event) {
+        if (this.popup) {
+            DomHandler.focus(this.target);
+            this.hide();
+        }
+        if (this.overlayVisible) {
+            this.hide();
+        }
+    }
+    
 
     onArrowDownKey(event) {
         const optionIndex = this.findNextOptionIndex(this.focusedOptionIndex());
@@ -655,36 +644,56 @@ export class Menu implements OnDestroy {
 
     itemClick(event: any, id: string) {
         const { originalEvent, item } = event;
-
+    
+        this.handleFocus();
+        if (this.isItemDisabled(item, originalEvent)) return;
+        
+        this.handleNavigation(item, originalEvent);
+        this.executeCommand(item, originalEvent);
+    
+        if (this.popup) {
+            this.hide();
+        }
+    
+        this.updateFocusedOption(id);
+    }
+    
+    handleFocus() {
         if (!this.focused) {
             this.focused = true;
             this.onFocus.emit();
         }
-
+    }
+    
+    isItemDisabled(item, originalEvent) {
         if (item.disabled) {
             originalEvent.preventDefault();
-            return;
+            return true;
         }
-
+        return false;
+    }
+    
+    handleNavigation(item, originalEvent) {
         if (!item.url && !item.routerLink) {
             originalEvent.preventDefault();
         }
-
+    }
+    
+    executeCommand(item, originalEvent) {
         if (item.command) {
             item.command({
                 originalEvent: originalEvent,
                 item: item
             });
         }
-
-        if (this.popup) {
-            this.hide();
-        }
-
+    }
+    
+    updateFocusedOption(id) {
         if (!this.popup && this.focusedOptionIndex() !== id) {
             this.focusedOptionIndex.set(id);
         }
     }
+    
 
     onOverlayClick(event: Event) {
         if (this.popup) {
@@ -700,20 +709,39 @@ export class Menu implements OnDestroy {
     bindDocumentClickListener() {
         if (!this.documentClickListener && isPlatformBrowser(this.platformId)) {
             const documentTarget: any = this.el ? this.el.nativeElement.ownerDocument : 'document';
-
+    
             this.documentClickListener = this.renderer.listen(documentTarget, 'click', (event) => {
-                const isOutsideContainer = this.containerViewChild.nativeElement && !this.containerViewChild.nativeElement.contains(event.target);
-                const isOutsideTarget = !(this.target && (this.target === event.target || this.target.contains(event.target)));
-                const bdcl1 = !this.popup && isOutsideContainer && isOutsideTarget;
-                if (bdcl1) this.onListBlur(event);
-                const bdcl2 = this.preventDocumentDefault && this.overlayVisible && isOutsideContainer && isOutsideTarget;
-                if (bdcl2) {
+                const isOutsideContainer = this.isOutsideContainer(event);
+                const isOutsideTarget = this.isOutsideTarget(event);
+    
+                if (this.shouldBlurList(isOutsideContainer, isOutsideTarget)) {
+                    this.onListBlur(event);
+                }
+    
+                if (this.shouldHideOverlay(isOutsideContainer, isOutsideTarget)) {
                     this.hide();
                     this.preventDocumentDefault = false;
                 }
             });
         }
     }
+    
+    isOutsideContainer(event: Event): boolean {
+        return this.containerViewChild.nativeElement && !this.containerViewChild.nativeElement.contains(event.target);
+    }
+    
+    isOutsideTarget(event: Event): boolean {
+        return !(this.target && (this.target === event.target || this.target.contains(event.target)));
+    }
+    
+    shouldBlurList(isOutsideContainer: boolean, isOutsideTarget: boolean): boolean {
+        return !this.popup && isOutsideContainer && isOutsideTarget;
+    }
+    
+    shouldHideOverlay(isOutsideContainer: boolean, isOutsideTarget: boolean): boolean {
+        return this.preventDocumentDefault && this.overlayVisible && isOutsideContainer && isOutsideTarget;
+    }
+    
 
     unbindDocumentClickListener() {
         if (this.documentClickListener) {

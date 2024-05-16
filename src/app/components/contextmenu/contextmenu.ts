@@ -570,56 +570,74 @@ export class ContextMenu implements OnInit, AfterContentInit, OnDestroy {
     }
 
     bindTriggerEventListener() {
-        if (isPlatformBrowser(this.platformId)) {
-            if (!this.triggerEventListener) {
-                if (!this.isMobile()) {
-                    if (this.global) {
-                        this.triggerEventListener = this.renderer.listen(this.document, this.triggerEvent, (event) => {
-                            this.show(event);
-                        });
-                    } else if (this.target) {
-                        this.triggerEventListener = this.renderer.listen(this.target, this.triggerEvent, (event) => {
-                            this.show(event);
-                        });
-                    }
-                } else {
-                    if (this.global) {
-                        this.triggerEventListener = this.renderer.listen(this.document, 'touchstart', this.onTouchStart.bind(this));
-                        this.touchEndListener = this.renderer.listen(this.document, 'touchend', this.onTouchEnd.bind(this));
-                    } else if (this.target) {
-                        this.triggerEventListener = this.renderer.listen(this.target, 'touchstart', this.onTouchStart.bind(this));
-                        this.touchEndListener = this.renderer.listen(this.target, 'touchend', this.onTouchEnd.bind(this));
-                    }
-                }
+        if (!isPlatformBrowser(this.platformId) || this.triggerEventListener) {
+            return;
+        }
+    
+        const touchStartEvent = this.global ? 'touchstart' : `${this.triggerEvent}`;
+        const touchEndEvent = 'touchend';
+        const eventTarget = this.global ? this.document : this.target || this.document;
+    
+        this.triggerEventListener = this.renderer.listen(eventTarget, touchStartEvent, (event) => {
+            if (this.isMobile()) {
+                this.onTouchStart(event);
+            } else {
+                this.show(event);
             }
+        });
+    
+        if (this.isMobile()) {
+            this.touchEndListener = this.renderer.listen(eventTarget, touchEndEvent, (event) => {
+                this.onTouchEnd();
+            });
         }
     }
+    
 
     bindGlobalListeners() {
-        if (isPlatformBrowser(this.platformId)) {
-            if (!this.documentClickListener) {
-                const documentTarget: any = this.el ? this.el.nativeElement.ownerDocument : 'document';
-
-                this.documentClickListener = this.renderer.listen(documentTarget, 'click', (event) => {
-                    const cm1 = this.containerViewChild.nativeElement.offsetParent && this.isOutsideClicked(event) && !event.ctrlKey && event.button !== 2 && this.triggerEvent !== 'click';
-                    if (cm1) {
-                        this.hide();
-                    }
-                });
-
-                this.documentTriggerListener = this.renderer.listen(documentTarget, this.triggerEvent, (event) => {
-                    if (this.containerViewChild.nativeElement.offsetParent && this.isOutsideClicked(event)) {
-                        this.hide();
-                    }
-                });
-            }
-            if (!this.resizeListener) {
-                this.resizeListener = this.renderer.listen(this.document.defaultView, 'resize', (event) => {
-                    this.hide();
-                });
-            }
+        if (!isPlatformBrowser(this.platformId)) {
+            return;
+        }
+    
+        if (!this.documentClickListener) {
+            const documentTarget: any = this.el ? this.el.nativeElement.ownerDocument : 'document';
+    
+            this.documentClickListener = this.createDocumentClickListener(documentTarget);
+            this.documentTriggerListener = this.createDocumentTriggerListener(documentTarget);
+        }
+    
+        if (!this.resizeListener) {
+            this.resizeListener = this.renderer.listen(this.document.defaultView, 'resize', () => {
+                this.hide();
+            });
         }
     }
+    
+    createDocumentClickListener(documentTarget: any) {
+        return this.renderer.listen(documentTarget, 'click', (event) => {
+            const isContainerVisible = this.containerViewChild.nativeElement.offsetParent;
+            const isClickOutside = this.isOutsideClicked(event);
+            const isClickTriggerEvent = this.triggerEvent === 'click';
+            const isCtrlKeyNotPressed = !event.ctrlKey;
+            const isNotRightClick = event.button !== 2;
+            const AB12 = isContainerVisible && isClickOutside && isCtrlKeyNotPressed && isNotRightClick && !isClickTriggerEvent;
+            if (AB12) {
+                this.hide();
+            }
+        });
+    }
+    
+    createDocumentTriggerListener(documentTarget: any) {
+        return this.renderer.listen(documentTarget, this.triggerEvent, (event) => {
+            const isContainerVisible = this.containerViewChild.nativeElement.offsetParent;
+            const isClickOutside = this.isOutsideClicked(event);
+    
+            if (isContainerVisible && isClickOutside) {
+                this.hide();
+            }
+        });
+    }
+    
 
     ngAfterContentInit() {
         this.templates?.forEach((item) => {
@@ -725,65 +743,34 @@ export class ContextMenu implements OnInit, AfterContentInit, OnDestroy {
     }
 
     onKeyDown(event: KeyboardEvent) {
-        const metaKey = event.metaKey || event.ctrlKey;
-
-        switch (event.code) {
-            case 'ArrowDown':
-                this.onArrowDownKey(event);
-                break;
-
-            case 'ArrowUp':
-                this.onArrowUpKey(event);
-                break;
-
-            case 'ArrowLeft':
-                this.onArrowLeftKey(event);
-                break;
-
-            case 'ArrowRight':
-                this.onArrowRightKey(event);
-                break;
-
-            case 'Home':
-                this.onHomeKey(event);
-                break;
-
-            case 'End':
-                this.onEndKey(event);
-                break;
-
-            case 'Space':
-                this.onSpaceKey(event);
-                break;
-
-            case 'Enter':
-                this.onEnterKey(event);
-                break;
-
-            case 'Escape':
-                this.onEscapeKey(event);
-                break;
-
-            case 'Tab':
-                this.onTabKey(event);
-                break;
-
-            case 'PageDown':
-            case 'PageUp':
-            case 'Backspace':
-            case 'ShiftLeft':
-            case 'ShiftRight':
-                //NOOP
-                break;
-
-            default:
-                if (!metaKey && ObjectUtils.isPrintableCharacter(event.key)) {
-                    this.searchItems(event, event.key);
-                }
-
-                break;
+        const keyHandlers: { [key: string]: () => void } = {
+            ArrowDown: () => this.onArrowDownKey(event),
+            ArrowUp: () => this.onArrowUpKey(event),
+            ArrowLeft: () => this.onArrowLeftKey(event),
+            ArrowRight: () => this.onArrowRightKey(event),
+            Home: () => this.onHomeKey(event),
+            End: () => this.onEndKey(event),
+            Space: () => this.onSpaceKey(event),
+            Enter: () => this.onEnterKey(event),
+            Escape: () => this.onEscapeKey(event),
+            Tab: () => this.onTabKey(event),
+        };
+    
+        const keyHandler = keyHandlers[event.code];
+        if (keyHandler) {
+            keyHandler();
+        } else {
+            this.handleOtherKeys(event);
         }
     }
+    
+    handleOtherKeys(event: KeyboardEvent) {
+        const metaKey = event.metaKey || event.ctrlKey;
+        if (!metaKey && ObjectUtils.isPrintableCharacter(event.key)) {
+            this.searchItems(event, event.key);
+        }
+    }
+    
 
     onArrowDownKey(event: KeyboardEvent) {
         const itemIndex = this.focusedItemInfo().index !== -1 ? this.findNextItemIndex(this.focusedItemInfo().index) : this.findFirstFocusedItemIndex();
@@ -1042,40 +1029,53 @@ export class ContextMenu implements OnInit, AfterContentInit, OnDestroy {
 
     searchItems(event: any, char: string) {
         this.searchValue = (this.searchValue || '') + char;
-
+    
+        const focusedIndex = this.focusedItemInfo().index;
         let itemIndex = -1;
         let matched = false;
-
-        if (this.focusedItemInfo().index !== -1) {
-            itemIndex = this.visibleItems.slice(this.focusedItemInfo().index).findIndex((processedItem) => this.isItemMatched(processedItem));
-            itemIndex = itemIndex === -1 ? this.visibleItems.slice(0, this.focusedItemInfo().index).findIndex((processedItem) => this.isItemMatched(processedItem)) : itemIndex + this.focusedItemInfo().index;
+    
+        if (focusedIndex !== -1) {
+            itemIndex = this.findItemIndexAfterFocused(focusedIndex);
         } else {
-            itemIndex = this.visibleItems.findIndex((processedItem) => this.isItemMatched(processedItem));
+            itemIndex = this.findItemIndexInVisibleItems();
         }
-
+    
         if (itemIndex !== -1) {
             matched = true;
-        }
-
-        if (itemIndex === -1 && this.focusedItemInfo().index === -1) {
-            itemIndex = this.findFirstFocusedItemIndex();
-        }
-
-        if (itemIndex !== -1) {
             this.changeFocusedItemIndex(event, itemIndex);
+        } else if (focusedIndex === -1) {
+            const firstFocusedIndex = this.findFirstFocusedItemIndex();
+            if (firstFocusedIndex !== -1) {
+                this.changeFocusedItemIndex(event, firstFocusedIndex);
+            }
         }
-
-        if (this.searchTimeout) {
-            clearTimeout(this.searchTimeout);
-        }
-
+    
+        clearTimeout(this.searchTimeout);
         this.searchTimeout = setTimeout(() => {
             this.searchValue = '';
             this.searchTimeout = null;
         }, 500);
-
+    
         return matched;
     }
+    
+    findItemIndexAfterFocused(focusedIndex: number): number {
+        let index = this.visibleItems.slice(focusedIndex).findIndex(item => this.isItemMatched(item));
+        if (index === -1) {
+            index = this.visibleItems.slice(0, focusedIndex).findIndex(item => this.isItemMatched(item));
+            if (index !== -1) {
+                index += focusedIndex;
+            }
+        } else {
+            index += focusedIndex;
+        }
+        return index;
+    }
+    
+    findItemIndexInVisibleItems(): number {
+        return this.visibleItems.findIndex(item => this.isItemMatched(item));
+    }
+    
 
     findVisibleItem(index) {
         return ObjectUtils.isNotEmpty(this.visibleItems) ? this.visibleItems[index] : null;
