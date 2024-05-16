@@ -1052,8 +1052,8 @@ export class PickList implements AfterViewChecked, AfterContentInit {
                     break;
                 }
             }
-
-            if (this.dragdrop && ((this.filterValueSource && listType === this.SOURCE_LIST) || (this.filterValueTarget && listType === this.TARGET_LIST))) this.filter(list, listType);
+            const pl1 = this.dragdrop && ((this.filterValueSource && listType === this.SOURCE_LIST) || (this.filterValueTarget && listType === this.TARGET_LIST));
+            if (pl1) this.filter(list, listType);
 
             this.movedUp = true;
             this.reorderedListElement = listElement;
@@ -1075,8 +1075,8 @@ export class PickList implements AfterViewChecked, AfterContentInit {
                     break;
                 }
             }
-
-            if (this.dragdrop && ((this.filterValueSource && listType === this.SOURCE_LIST) || (this.filterValueTarget && listType === this.TARGET_LIST))) this.filter(list, listType);
+            const pl2 = this.dragdrop && ((this.filterValueSource && listType === this.SOURCE_LIST) || (this.filterValueTarget && listType === this.TARGET_LIST));
+            if (pl2) this.filter(list, listType);
 
             listElement.scrollTop = 0;
             callback.emit({ items: selectedItems });
@@ -1099,8 +1099,8 @@ export class PickList implements AfterViewChecked, AfterContentInit {
                     break;
                 }
             }
-
-            if (this.dragdrop && ((this.filterValueSource && listType === this.SOURCE_LIST) || (this.filterValueTarget && listType === this.TARGET_LIST))) this.filter(list, listType);
+            const pl3 = this.dragdrop && ((this.filterValueSource && listType === this.SOURCE_LIST) || (this.filterValueTarget && listType === this.TARGET_LIST));
+            if (pl3) this.filter(list, listType);
 
             this.movedDown = true;
             this.reorderedListElement = listElement;
@@ -1122,8 +1122,8 @@ export class PickList implements AfterViewChecked, AfterContentInit {
                     break;
                 }
             }
-
-            if (this.dragdrop && ((this.filterValueSource && listType === this.SOURCE_LIST) || (this.filterValueTarget && listType === this.TARGET_LIST))) this.filter(list, listType);
+            const pl4 = this.dragdrop && ((this.filterValueSource && listType === this.SOURCE_LIST) || (this.filterValueTarget && listType === this.TARGET_LIST));
+            if (pl4) this.filter(list, listType);
 
             listElement.scrollTop = listElement.scrollHeight;
             callback.emit({ items: selectedItems });
@@ -1485,8 +1485,8 @@ export class PickList implements AfterViewChecked, AfterContentInit {
 
     onSpaceKey(event: Event | any, selectedItems: any[], callback: EventEmitter<any>, listType: number) {
         event.preventDefault();
-
-        if (event.shiftKey && selectedItems && selectedItems.length > 0) {
+        const pl6 = event.shiftKey && selectedItems && selectedItems.length > 0;
+        if (pl6) {
             let visibleList = this.getVisibleList(listType);
             let lastSelectedIndex = this.getLatestSelectedVisibleOptionIndex(visibleList, selectedItems);
 

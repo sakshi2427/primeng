@@ -1,4 +1,27 @@
-import { animate, AnimationEvent, state, style, transition, trigger } from '@angular/animations';
+import {
+    animate,
+    AnimationEvent,
+    state,
+    style,
+    transition,
+    trigger
+} from '@angular/animations';
+
+const animationEvent = AnimationEvent;
+const animationState = state;
+const animationStyle = style;
+const animationTransition = transition;
+const animationTrigger = trigger;
+
+export {
+    animate,
+    animationEvent,
+    animationState,
+    animationStyle,
+    animationTransition,
+    animationTrigger
+};
+
 
 import { CommonModule, DOCUMENT } from '@angular/common';
 import {
@@ -988,20 +1011,27 @@ export class Calendar implements OnInit, OnDestroy, ControlValueAccessor {
 
     @ViewChild('inputfield', { static: false }) inputfieldViewChild: Nullable<ElementRef>;
 
-    @ViewChild('contentWrapper', { static: false }) set content(content: ElementRef) {
-        this.contentViewChild = content;
+@ViewChild('contentWrapper', { static: false })
+set content(content: ElementRef) {
+    this.contentViewChild = content;
 
-        if (this.contentViewChild) {
-            if (this.isMonthNavigate) {
-                Promise.resolve(null).then(() => this.updateFocus());
-                this.isMonthNavigate = false;
-            } else {
-                if (!this.focus && !this.inline) {
-                    this.initFocusableCell();
-                }
+    if (this.contentViewChild) {
+        if (this.isMonthNavigate) {
+            this.zone.runOutsideAngular(() => {
+                setTimeout(() => {
+                    this.zone.run(() => {
+                        this.updateFocus();
+                        this.isMonthNavigate = false;
+                    });
+                });
+            });
+        } else {
+            if (!this.focus && !this.inline) {
+                this.initFocusableCell();
             }
         }
     }
+}
 
     contentViewChild!: ElementRef;
 
@@ -2080,19 +2110,14 @@ getFormattedRangeSelection() {
     }
 
 
-        isDateDisabled(day: number, month: number, year: number): boolean {
-        if (this.disabledDates) {
-            for (let disabledDate of this.disabledDates) {
-                if (disabledDate.getFullYear() === year && 
-                    disabledDate.getMonth() === month && 
-                    disabledDate.getDate() === day) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+isDateDisabled(day: number, month: number, year: number): boolean {
+    if (this.disabledDates) {
+        const dateToCheck = new Date(year, month, day);
+        return this.disabledDates.some(disabledDate => disabledDate.getTime() === dateToCheck.getTime());
     }
+    return false;
+}
+
 
 
 
@@ -2174,35 +2199,34 @@ getFormattedRangeSelection() {
         this.navForward(event);
     }
 
-        onContainerButtonKeydown(event: KeyboardEvent) {
-        switch (event.which) {
-            //tab
-            case 9:
-                if (!this.inline) {
-                    this.trapFocus(event);
+onContainerButtonKeydown(event: KeyboardEvent) {
+    switch (event.code) {
+        //tab
+        case 'Tab':
+            if (!this.inline) {
+                this.trapFocus(event);
+            }
+            if (this.inline) {
+                const headerElements = DomHandler.findSingle(this.containerViewChild?.nativeElement, '.p-datepicker-header');
+                const element = event.target as HTMLElement;
+                if (element === headerElements.children[headerElements.children.length - 1]) {
+                    this.initFocusableCell();
                 }
-                if (this.inline) {
-                    const headerElements = DomHandler.findSingle(this.containerViewChild?.nativeElement, '.p-datepicker-header');
-                    const element = event.target;
-                    if (element == headerElements.children[headerElements.children.length - 1]) {
-                        this.initFocusableCell();
-                    }
-                }
-                break;
+            }
+            break;
         
-            //escape
-            case 27:
-                this.inputfieldViewChild?.nativeElement.focus();
-                this.overlayVisible = false;
-                event.preventDefault();
-                break;
+        //escape
+        case 'Escape':
+            this.inputfieldViewChild?.nativeElement.focus();
+            this.overlayVisible = false;
+            event.preventDefault();
+            break;
         
-            default:
-                // Noop
-                break;
-        }
+        default:
+            // No operation
+            break;
     }
-
+}
 
     onInputKeydown(event: any) {
 
@@ -2380,86 +2404,85 @@ handleTabKey() {
         }
     }
 
-    onMonthCellKeydown(event: any, index: number) {
-        const cell = event.currentTarget;
-        switch (event.which) {
-            //arrows
-            case 38:
-            case 40: {
-                cell.tabIndex = '-1';
-                var cells = cell.parentElement.children;
-                var cellIndex = DomHandler.index(cell);
-                let nextCell = cells[event.which === 40 ? cellIndex + 3 : cellIndex - 3];
-                if (nextCell) {
-                    nextCell.tabIndex = '0';
-                    nextCell.focus();
-                }
-                event.preventDefault();
-                break;
+onMonthCellKeydown(event: any, index: number) {
+    const cell = event.currentTarget;
+    switch (event.which) {
+        //arrows
+        case 38:
+        case 40: {
+            cell.tabIndex = '-1';
+            const cells = cell.parentElement.children;
+            const cellIndex = DomHandler.index(cell);
+            const nextCellIndex = event.which === 40 ? cellIndex + 3 : cellIndex - 3;
+            const nextCell = cells[nextCellIndex];
+            if (nextCell) {
+                nextCell.tabIndex = '0';
+                nextCell.focus();
             }
-
-            //left arrow
-            case 37: {
-                cell.tabIndex = '-1';
-                let prevCell = cell.previousElementSibling;
-                if (prevCell) {
-                    prevCell.tabIndex = '0';
-                    prevCell.focus();
-                } else {
-                    this.navigationState = { backward: true };
-                    this.navBackward(event);
-                }
-
-                event.preventDefault();
-                break;
-            }
-
-            //right arrow
-            case 39: {
-                cell.tabIndex = '-1';
-                let nextCell = cell.nextElementSibling;
-                if (nextCell) {
-                    nextCell.tabIndex = '0';
-                    nextCell.focus();
-                } else {
-                    this.navigationState = { backward: false };
-                    this.navForward(event);
-                }
-
-                event.preventDefault();
-                break;
-            }
-
-            //enter
-            //space
-            case 13:
-            case 32: {
-                this.onMonthSelect(event, index);
-                event.preventDefault();
-                break;
-            }
-
-            //escape
-            case 27: {
-                this.inputfieldViewChild?.nativeElement.focus();
-                this.overlayVisible = false;
-                event.preventDefault();
-                break;
-            }
-
-            //tab
-            case 9: {
-                if (!this.inline) {
-                    this.trapFocus(event);
-                }
-                break;
-            }
-
-            default:
-                //no op
-                break;
+            event.preventDefault();
+            break;
         }
+
+        //left arrow
+        case 37: {
+            cell.tabIndex = '-1';
+            const prevCell = cell.previousElementSibling;
+            if (prevCell) {
+                prevCell.tabIndex = '0';
+                prevCell.focus();
+            } else {
+                this.navigationState = { backward: true };
+                this.navBackward(event);
+            }
+            event.preventDefault();
+            break;
+        }
+
+        //right arrow
+        case 39: {
+            cell.tabIndex = '-1';
+            const nextCell = cell.nextElementSibling;
+            if (nextCell) {
+                nextCell.tabIndex = '0';
+                nextCell.focus();
+            } else {
+                this.navigationState = { backward: false };
+                this.navForward(event);
+            }
+            event.preventDefault();
+            break;
+        }
+
+        //enter
+        //space
+        case 13:
+        case 32: {
+            this.onMonthSelect(event, index);
+            event.preventDefault();
+            break;
+        }
+
+        //escape
+        case 27: {
+            this.inputfieldViewChild?.nativeElement.focus();
+            this.overlayVisible = false;
+            event.preventDefault();
+            break;
+        }
+
+        //tab
+        case 9: {
+            if (!this.inline) {
+                this.trapFocus(event);
+            }
+            break;
+        }
+
+        default:
+            //no op
+            break;
     }
+}
 
     onYearCellKeydown(event: any, index: number) {
         const cell = event.currentTarget;
@@ -2686,52 +2709,53 @@ handleTabKey() {
 
 
 
-    trapFocus(event: any) {
-        let focusableElements = DomHandler.getFocusableElements(this.contentViewChild.nativeElement);
+trapFocus(event: any) {
+    const focusableElements = DomHandler.getFocusableElements(this.contentViewChild.nativeElement);
 
-        if (focusableElements && focusableElements.length > 0) {
-            if (!focusableElements[0].ownerDocument.activeElement) {
-                focusableElements[0].focus();
-            } else {
-                let focusedIndex = focusableElements.indexOf(focusableElements[0].ownerDocument.activeElement);
+    if (focusableElements && focusableElements.length > 0) {
+        const activeElement = focusableElements[0].ownerDocument.activeElement;
 
-                if (event.shiftKey) {
-                    if (focusedIndex == -1 || focusedIndex === 0) {
-                        if (this.focusTrap) {
-                            focusableElements[focusableElements.length - 1].focus();
-                        } else {
-                            if (focusedIndex === -1) return this.hideOverlay();
-                            else if (focusedIndex === 0) return;
-                        }
+        if (!activeElement) {
+            focusableElements[0].focus();
+        } else {
+            const focusedIndex = focusableElements.indexOf(activeElement);
+
+            if (event.shiftKey) {
+                if (focusedIndex === -1 || focusedIndex === 0) {
+                    if (this.focusTrap) {
+                        focusableElements[focusableElements.length - 1].focus();
                     } else {
-                        focusableElements[focusedIndex - 1].focus();
+                        if (focusedIndex === -1) {
+                            this.hideOverlay();
+                            return;
+                        }
                     }
                 } else {
-                    if (focusedIndex == -1) {
-                        if (this.timeOnly) {
-                            focusableElements[0].focus();
-                        } else {
-                            let spanIndex = 0;
-
-                            for (let i = 0; i < focusableElements.length; i++) {
-                                if (focusableElements[i].tagName === 'SPAN') spanIndex = i;
-                            }
-
-                            focusableElements[spanIndex].focus();
-                        }
-                    } else if (focusedIndex === focusableElements.length - 1) {
-                        if (!this.focusTrap && focusedIndex != -1) return this.hideOverlay();
-
+                    focusableElements[focusedIndex - 1].focus();
+                }
+            } else {
+                if (focusedIndex === -1) {
+                    if (this.timeOnly) {
                         focusableElements[0].focus();
                     } else {
-                        focusableElements[focusedIndex + 1].focus();
+                        let spanIndex = focusableElements.findIndex(el => el.tagName === 'SPAN');
+                        focusableElements[spanIndex].focus();
                     }
+                } else if (focusedIndex === focusableElements.length - 1) {
+                    if (!this.focusTrap) {
+                        this.hideOverlay();
+                        return;
+                    }
+                    focusableElements[0].focus();
+                } else {
+                    focusableElements[focusedIndex + 1].focus();
                 }
             }
         }
-
-        event.preventDefault();
     }
+
+    event.preventDefault();
+}
 
     onMonthDropdownChange(m: string) {
         this.currentMonth = parseInt(m);
@@ -3750,8 +3774,8 @@ adjustHourFor12Hour(hour) {
         }
 
         date = this.daylightSavingAdjust(new Date(year, month - 1, day));
-
-        if (date.getFullYear() !== year || date.getMonth() + 1 !== month || date.getDate() !== day) {
+        const element_l=date.getFullYear() !== year || date.getMonth() + 1 !== month || date.getDate() !== day
+        if (element_l) {
             throw 'Invalid date'; // E.g. 31/02/00
         }
 

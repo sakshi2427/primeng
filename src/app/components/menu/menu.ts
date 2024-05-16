@@ -704,10 +704,10 @@ export class Menu implements OnDestroy {
             this.documentClickListener = this.renderer.listen(documentTarget, 'click', (event) => {
                 const isOutsideContainer = this.containerViewChild.nativeElement && !this.containerViewChild.nativeElement.contains(event.target);
                 const isOutsideTarget = !(this.target && (this.target === event.target || this.target.contains(event.target)));
-                if (!this.popup && isOutsideContainer && isOutsideTarget) {
-                    this.onListBlur(event);
-                }
-                if (this.preventDocumentDefault && this.overlayVisible && isOutsideContainer && isOutsideTarget) {
+                const bdcl1 = !this.popup && isOutsideContainer && isOutsideTarget;
+                if (bdcl1) this.onListBlur(event);
+                const bdcl2 = this.preventDocumentDefault && this.overlayVisible && isOutsideContainer && isOutsideTarget;
+                if (bdcl2) {
                     this.hide();
                     this.preventDocumentDefault = false;
                 }

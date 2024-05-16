@@ -1289,7 +1289,8 @@ export class Table implements OnInit, AfterViewInit, AfterContentInit, Blockable
 
     ngOnChanges(simpleChange: SimpleChanges) {
         if (simpleChange.value) {
-            if (this.isStateful() && !this.stateRestored && isPlatformBrowser(this.platformId)) {
+            const a1=this.isStateful() && !this.stateRestored && isPlatformBrowser(this.platformId);
+            if (a1) {
                 this.restoreState();
             }
 
@@ -1297,8 +1298,8 @@ export class Table implements OnInit, AfterViewInit, AfterContentInit, Blockable
 
             if (!this.lazy) {
                 this.totalRecords = this._value ? this._value.length : 0;
-
-                if (this.sortMode == 'single' && (this.sortField || this.groupRowsBy)) this.sortSingle();
+                const a2=this.sortMode == 'single' && (this.sortField || this.groupRowsBy);
+                if (a2) this.sortSingle();
                 else if (this.sortMode == 'multiple' && (this.multiSortMeta || this.groupRowsBy)) this.sortMultiple();
                 else if (this.hasFilter())
                     //sort already filters
@@ -1313,8 +1314,8 @@ export class Table implements OnInit, AfterViewInit, AfterContentInit, Blockable
                 this._columns = simpleChange.columns.currentValue;
                 this.tableService.onColumnsChange(simpleChange.columns.currentValue);
             }
-
-            if (this._columns && this.isStateful() && this.reorderableColumns && !this.columnOrderStateRestored) {
+            const a3 = this._columns && this.isStateful() && this.reorderableColumns && !this.columnOrderStateRestored;
+            if (a3) {
                 this.restoreColumnOrder();
 
                 this.tableService.onColumnsChange(this._columns);
@@ -1363,7 +1364,8 @@ export class Table implements OnInit, AfterViewInit, AfterContentInit, Blockable
 
         if (simpleChange.multiSortMeta) {
             this._multiSortMeta = simpleChange.multiSortMeta.currentValue;
-            if (this.sortMode === 'multiple' && (this.initialized || (!this.lazy && !this.virtualScroll))) {
+            const a5 = this.sortMode === 'multiple' && (this.initialized || (!this.lazy && !this.virtualScroll));
+            if (a5) {
                 this.sortMultiple();
             }
         }
@@ -1513,7 +1515,8 @@ export class Table implements OnInit, AfterViewInit, AfterContentInit, Blockable
     sortSingle() {
         let field = this.sortField || this.groupRowsBy;
         let order = this.sortField ? this.sortOrder : this.groupRowsByOrder;
-        if (this.groupRowsBy && this.sortField && this.groupRowsBy !== this.sortField) {
+        const s_1=this.groupRowsBy && this.sortField && this.groupRowsBy !== this.sortField;
+        if (s_1) {
             this._multiSortMeta = [this.getGroupRowsMeta(), { field: this.sortField, order: this.sortOrder }];
             this.sortMultiple();
             return;
@@ -1649,7 +1652,8 @@ export class Table implements OnInit, AfterViewInit, AfterContentInit, Blockable
         let target = <HTMLElement>event.originalEvent.target;
         let targetNode = target.nodeName;
         let parentNode = target.parentElement && target.parentElement.nodeName;
-        if (targetNode == 'INPUT' || targetNode == 'BUTTON' || targetNode == 'A' || parentNode == 'INPUT' || parentNode == 'BUTTON' || parentNode == 'A' || DomHandler.hasClass(event.originalEvent.target, 'p-clickable')) {
+        const src1 = targetNode == 'INPUT' || targetNode == 'BUTTON' || targetNode == 'A' || parentNode == 'INPUT' || parentNode == 'BUTTON' || parentNode == 'A' || DomHandler.hasClass(event.originalEvent.target, 'p-clickable');
+        if (src1) {
             return;
         }
 
@@ -1658,7 +1662,8 @@ export class Table implements OnInit, AfterViewInit, AfterContentInit, Blockable
             let rowIndex = event.rowIndex;
 
             this.preventSelectionSetterPropagation = true;
-            if (this.isMultipleSelectionMode() && event.originalEvent.shiftKey && this.anchorRowIndex != null) {
+            const src2 = this.isMultipleSelectionMode() && event.originalEvent.shiftKey && this.anchorRowIndex != null;
+            if (src2) {
                 DomHandler.clearSelection();
                 if (this.rangeRowIndex != null) {
                     this.clearSelectionRange(event.originalEvent);
@@ -2037,7 +2042,8 @@ export class Table implements OnInit, AfterViewInit, AfterContentInit, Blockable
 
     isFilterBlank(filter: any): boolean {
         if (filter !== null && filter !== undefined) {
-            if ((typeof filter === 'string' && filter.trim().length == 0) || (Array.isArray(filter) && filter.length == 0)) return true;
+            const abc = (typeof filter === 'string' && filter.trim().length == 0) || (Array.isArray(filter) && filter.length == 0);
+            if (abc) return true;
             else return false;
         }
         return true;
@@ -2084,8 +2090,8 @@ export class Table implements OnInit, AfterViewInit, AfterContentInit, Blockable
                             if (Array.isArray(filterMeta)) {
                                 for (let meta of filterMeta) {
                                     localMatch = this.executeLocalFilter(filterField, this.value[i], meta);
-
-                                    if ((meta.operator === FilterOperator.OR && localMatch) || (meta.operator === FilterOperator.AND && !localMatch)) {
+                                    const abc3 = (meta.operator === FilterOperator.OR && localMatch) || (meta.operator === FilterOperator.AND && !localMatch);
+                                    if (abc3) {
                                         break;
                                     }
                                 }
@@ -2098,8 +2104,8 @@ export class Table implements OnInit, AfterViewInit, AfterContentInit, Blockable
                             }
                         }
                     }
-
-                    if (this.filters['global'] && !globalMatch && globalFilterFieldsArray) {
+                    const abc5 =this.filters['global'] && !globalMatch && globalFilterFieldsArray
+                    if (abc5) {
                         for (let j = 0; j < globalFilterFieldsArray.length; j++) {
                             let globalFilterField = globalFilterFieldsArray[j].field || globalFilterFieldsArray[j];
                             globalMatch = (<any>this.filterService).filters[(<any>this.filters['global']).matchMode](ObjectUtils.resolveFieldData(this.value[i], globalFilterField), (<FilterMetadata>this.filters['global']).value, this.filterLocale);
@@ -2354,7 +2360,8 @@ export class Table implements OnInit, AfterViewInit, AfterContentInit, Blockable
     bindDocumentEditListener() {
         if (!this.documentEditListener) {
             this.documentEditListener = this.renderer.listen(this.document, 'click', (event) => {
-                if (this.editingCell && !this.selfClick && this.isEditingCellValid()) {
+                const bdel1 = this.editingCell && !this.selfClick && this.isEditingCellValid();
+                if (bdel1) {
                     DomHandler.removeClass(this.editingCell, 'p-cell-editing');
                     this.editingCell = null;
                     this.onEditComplete.emit({ field: this.editingCellField, data: this.editingCellData, originalEvent: event, index: <number>this.editingCellRowIndex });
@@ -2520,7 +2527,8 @@ export class Table implements OnInit, AfterViewInit, AfterContentInit, Blockable
     }
 
     onColumnDragEnter(event: any, dropHeader: any) {
-        if (this.reorderableColumns && this.draggedColumn && dropHeader) {
+        const ocde1 = this.reorderableColumns && this.draggedColumn && dropHeader;
+        if (ocde1) {
             event.preventDefault();
             let containerOffset = DomHandler.getOffset(this.containerViewChild?.nativeElement);
             let dropHeaderOffset = DomHandler.getOffset(dropHeader);
@@ -2564,15 +2572,16 @@ export class Table implements OnInit, AfterViewInit, AfterContentInit, Blockable
             let dragIndex = DomHandler.indexWithinGroup(this.draggedColumn, 'preorderablecolumn');
             let dropIndex = DomHandler.indexWithinGroup(dropColumn, 'preorderablecolumn');
             let allowDrop = dragIndex != dropIndex;
-            if (allowDrop && ((dropIndex - dragIndex == 1 && this.dropPosition === -1) || (dragIndex - dropIndex == 1 && this.dropPosition === 1))) {
+            const ocd1 = allowDrop && ((dropIndex - dragIndex == 1 && this.dropPosition === -1) || (dragIndex - dropIndex == 1 && this.dropPosition === 1));
+            if (ocd1) {
                 allowDrop = false;
             }
-
-            if (allowDrop && dropIndex < dragIndex && this.dropPosition === 1) {
+            const ocd2 = allowDrop && dropIndex < dragIndex && this.dropPosition === 1;
+            if (ocd2) {
                 dropIndex = dropIndex + 1;
             }
-
-            if (allowDrop && dropIndex > dragIndex && this.dropPosition === -1) {
+            const ocd3 = allowDrop && dropIndex > dragIndex && this.dropPosition === -1;
+            if (ocd3) {
                 dropIndex = dropIndex - 1;
             }
 
@@ -4061,7 +4070,8 @@ export class ReorderableColumn implements AfterViewInit, OnDestroy {
     }
 
     onMouseDown(event: any) {
-        if (event.target.nodeName === 'INPUT' || event.target.nodeName === 'TEXTAREA' || DomHandler.hasClass(event.target, 'p-column-resizer')) this.el.nativeElement.draggable = false;
+        const omd1 = event.target.nodeName === 'INPUT' || event.target.nodeName === 'TEXTAREA' || DomHandler.hasClass(event.target, 'p-column-resizer');
+        if (omd1) this.el.nativeElement.draggable = false;
         else this.el.nativeElement.draggable = true;
     }
 
@@ -4137,10 +4147,7 @@ export class EditableColumn implements OnChanges, AfterViewInit, OnDestroy {
 
             if (this.dt.editingCell) {
                 if (this.dt.editingCell !== this.el.nativeElement) {
-                    if (!this.dt.isEditingCellValid()) {
-                        return;
-                    }
-
+                    if (!this.dt.isEditingCellValid()) return;
                     this.closeEditingCell(true, event);
                     this.openCell();
                 }
@@ -5704,8 +5711,8 @@ export class ColumnFilter implements AfterContentInit {
             this.documentClickListener = this.renderer.listen(documentTarget, 'mousedown', (event) => {
                 const dialogElements = document.querySelectorAll('[role="dialog"]');
                 const targetIsColumnFilterMenuButton = event.target.closest('.p-column-filter-menu-button');
-
-                if (this.overlayVisible && this.isOutsideClicked(event) && (targetIsColumnFilterMenuButton || dialogElements?.length <= 1)) {
+                const bdcl1 = this.overlayVisible && this.isOutsideClicked(event) && (targetIsColumnFilterMenuButton || dialogElements?.length <= 1);
+                if (bdcl1) {
                     this.hide();
                 }
 

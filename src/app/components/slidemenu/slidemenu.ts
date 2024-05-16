@@ -1262,7 +1262,8 @@ export class SlideMenu implements OnInit, AfterContentInit, OnDestroy {
                             this.hide();
                         }
                     } else {
-                        if (isOutsideContainer && isOutsideTarget && this.focused) {
+                        const a1 = isOutsideContainer && isOutsideTarget && this.focused;
+                        if (a1) {
                             this.onMenuBlur();
                         }
                     }

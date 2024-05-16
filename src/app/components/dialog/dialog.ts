@@ -635,8 +635,8 @@ export class Dialog implements AfterContentInit, OnInit, OnDestroy {
 
             // for nested dialogs w/modal
             const scrollBlockers = document.querySelectorAll('.p-dialog-mask-scrollblocker');
-
-            if (this.modal && scrollBlockers && scrollBlockers.length == 1) {
+            const dc1 = this.modal && scrollBlockers && scrollBlockers.length == 1;
+            if (dc1) {
                 DomHandler.unblockBodyScroll();
             }
 
@@ -827,13 +827,13 @@ export class Dialog implements AfterContentInit, OnInit, OnDestroy {
                 newWidth += deltaX;
                 newHeight += deltaY;
             }
-
-            if ((!minWidth || newWidth > parseInt(minWidth)) && offset.left + newWidth < viewport.width) {
+            const or1 = (!minWidth || newWidth > parseInt(minWidth)) && offset.left + newWidth < viewport.width;
+            if (or1) {
                 this._style.width = newWidth + 'px';
                 (this.container as HTMLDivElement).style.width = this._style.width;
             }
-
-            if ((!minHeight || newHeight > parseInt(minHeight)) && offset.top + newHeight < viewport.height) {
+            const or2 = (!minHeight || newHeight > parseInt(minHeight)) && offset.top + newHeight < viewport.height;
+            if (or2) {
                 (<ElementRef>this.contentViewChild).nativeElement.style.height = contentHeight + newHeight - containerHeight + 'px';
 
                 if (this._style.height) {

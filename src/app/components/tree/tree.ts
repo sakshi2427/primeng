@@ -1,29 +1,27 @@
 import { CommonModule } from '@angular/common';
-import {
-    AfterContentInit,
-    booleanAttribute,
-    ChangeDetectionStrategy,
-    ChangeDetectorRef,
-    Component,
-    ContentChildren,
-    ElementRef,
-    EventEmitter,
-    forwardRef,
-    Inject,
-    Input,
-    NgModule,
-    numberAttribute,
-    OnChanges,
-    OnDestroy,
-    OnInit,
-    Optional,
-    Output,
-    QueryList,
-    SimpleChanges,
-    TemplateRef,
-    ViewChild,
-    ViewEncapsulation
-} from '@angular/core';
+import { AfterContentInit } from '@angular/core';
+import { booleanAttribute } from '@angular/core';
+import { ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef } from '@angular/core';
+import { Component } from '@angular/core';
+import { ContentChildren } from '@angular/core';
+import { ElementRef} from '@angular/core';
+import { EventEmitter} from '@angular/core';
+import {forwardRef } from '@angular/core';
+import {Inject} from '@angular/core';
+import {Input} from '@angular/core';
+import { NgModule } from '@angular/core';
+import {numberAttribute} from '@angular/core';
+import {OnChanges} from '@angular/core';
+import {OnDestroy} from '@angular/core';
+import {OnInit} from '@angular/core';
+import {Optional} from '@angular/core';
+import {Output} from '@angular/core';
+import {QueryList} from '@angular/core';
+import {SimpleChanges} from '@angular/core';
+import {TemplateRef} from '@angular/core';
+import {ViewChild} from '@angular/core';
+import {ViewEncapsulation} from '@angular/core';
 import { BlockableUI, PrimeNGConfig, PrimeTemplate, SharedModule, TranslationKeys, TreeDragDropService, TreeNode } from 'primeng/api';
 import { DomHandler } from 'primeng/dom';
 import { RippleModule } from 'primeng/ripple';
@@ -497,7 +495,8 @@ export class UITreeNode implements OnInit {
     }
 
     onDropNodeDragEnter(event: any) {
-        if (this.tree.droppableNodes && this.node?.droppable !== false && this.tree.allowDrop(<TreeNode>this.tree.dragNode, <TreeNode>this.node, this.tree.dragNodeScope)) {
+        const onde1 = this.tree.droppableNodes && this.node?.droppable !== false && this.tree.allowDrop(<TreeNode>this.tree.dragNode, <TreeNode>this.node, this.tree.dragNodeScope);
+        if (onde1) {
             this.draghoverNode = true;
         }
     }
@@ -505,7 +504,8 @@ export class UITreeNode implements OnInit {
     onDropNodeDragLeave(event: any) {
         if (this.tree.droppableNodes) {
             let rect = event.currentTarget.getBoundingClientRect();
-            if (event.x > rect.left + rect.width || event.x < rect.left || event.y >= Math.floor(rect.top + rect.height) || event.y < rect.top) {
+            const odnd1 = event.x > rect.left + rect.width || event.x < rect.left || event.y >= Math.floor(rect.top + rect.height) || event.y < rect.top;
+            if (odnd1) {
                 this.draghoverNode = false;
             }
         }
@@ -1431,8 +1431,8 @@ export class Tree implements OnInit, AfterContentInit, OnChanges, OnDestroy, Blo
                         this.selection = this.selection.filter((val: TreeNode, i: number) => i != index);
                     }
                 }
-
-                if (childPartialSelected || (selectedCount > 0 && selectedCount != node.children.length)) node.partialSelected = true;
+                const rpu1 = childPartialSelected || (selectedCount > 0 && selectedCount != node.children.length);
+                if (rpu1) node.partialSelected = true;
                 else node.partialSelected = false;
             }
 
@@ -1495,14 +1495,16 @@ export class Tree implements OnInit, AfterContentInit, OnChanges, OnDestroy, Blo
     }
 
     onDragOver(event: DragEvent) {
-        if (this.droppableNodes && (!this.value || (<any>this.value).length === 0)) {
+        const odo1 = this.droppableNodes && (!this.value || (<any>this.value).length === 0);
+        if (odo1) {
             (<any>event).dataTransfer.dropEffect = 'move';
             event.preventDefault();
         }
     }
 
     onDrop(event: DragEvent) {
-        if (this.droppableNodes && (!this.value || (<any>this.value).length === 0)) {
+        const od1 = this.droppableNodes && (!this.value || (<any>this.value).length === 0);
+        if (od1) {
             event.preventDefault();
             let dragNode = this.dragNode as TreeNode;
 
@@ -1551,7 +1553,8 @@ export class Tree implements OnInit, AfterContentInit, OnChanges, OnDestroy, Blo
     onDragLeave(event: DragEvent) {
         if (this.droppableNodes) {
             let rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-            if (event.x > rect.left + rect.width || event.x < rect.left || event.y > rect.top + rect.height || event.y < rect.top) {
+            const odl1 = event.x > rect.left + rect.width || event.x < rect.left || event.y > rect.top + rect.height || event.y < rect.top;
+            if (odl1) {
                 this.dragHover = false;
             }
         }
@@ -1622,10 +1625,9 @@ export class Tree implements OnInit, AfterContentInit, OnChanges, OnDestroy, Blo
             for (let node of <TreeNode<any>[]>this.value) {
                 let copyNode = { ...node };
                 let paramsWithoutNode = { searchFields, filterText, isStrictMode };
-                if (
-                    (isStrictMode && (this.findFilteredNodes(copyNode, paramsWithoutNode) || this.isFilterMatched(copyNode, paramsWithoutNode))) ||
-                    (!isStrictMode && (this.isFilterMatched(copyNode, paramsWithoutNode) || this.findFilteredNodes(copyNode, paramsWithoutNode)))
-                ) {
+                const f1 = (isStrictMode && (this.findFilteredNodes(copyNode, paramsWithoutNode) || this.isFilterMatched(copyNode, paramsWithoutNode))) ||
+                (!isStrictMode && (this.isFilterMatched(copyNode, paramsWithoutNode) || this.findFilteredNodes(copyNode, paramsWithoutNode)));
+                if (f1) {
                     this.filteredNodes.push(copyNode);
                 }
             }
@@ -1706,8 +1708,8 @@ export class Tree implements OnInit, AfterContentInit, OnChanges, OnDestroy, Blo
                 matched = true;
             }
         }
-
-        if (!matched || (isStrictMode && !this.isNodeLeaf(node))) {
+        const ifm1 = !matched || (isStrictMode && !this.isNodeLeaf(node));
+        if (ifm1) {
             matched = this.findFilteredNodes(node, { searchFields, filterText, isStrictMode }) || matched;
         }
 

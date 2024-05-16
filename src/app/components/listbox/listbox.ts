@@ -764,7 +764,8 @@ export class Listbox implements AfterContentInit, OnInit, ControlValueAccessor, 
     }
 
     autoUpdateModel() {
-        if (this.selectOnFocus && this.autoOptionFocus && !this.hasSelectedOption() && !this.multiple) {
+        const aum1 = this.selectOnFocus && this.autoOptionFocus && !this.hasSelectedOption() && !this.multiple;
+        if (aum1) {
             const focusedOptionIndex = this.findFirstFocusedOptionIndex();
             this.focusedOptionIndex.set(focusedOptionIndex);
             this.onOptionSelect(null, this.visibleOptions()[this.focusedOptionIndex()]);
@@ -787,7 +788,8 @@ export class Listbox implements AfterContentInit, OnInit, ControlValueAccessor, 
     }
 
     onOptionSelect(event, option, index = -1) {
-        if (this.disabled || this.isOptionDisabled(option) || this.readonly) {
+        const ops1 = this.disabled || this.isOptionDisabled(option) || this.readonly;
+        if (ops1) {
             return;
         }
 
@@ -912,7 +914,8 @@ export class Listbox implements AfterContentInit, OnInit, ControlValueAccessor, 
     }
 
     onOptionDoubleClick(event: MouseEvent, option: any) {
-        if (this.disabled || this.isOptionDisabled(option) || this.readonly) {
+        const opdc1 = this.disabled || this.isOptionDisabled(option) || this.readonly;
+        if (opdc1) {
             return;
         }
 
@@ -945,7 +948,8 @@ export class Listbox implements AfterContentInit, OnInit, ControlValueAccessor, 
     }
 
     onFocusout(event: FocusEvent) {
-        if (!this.el.nativeElement.contains(event.relatedTarget) && this.lastHiddenFocusableElement && this.firstHiddenFocusableElement) {
+        const ofo1 = !this.el.nativeElement.contains(event.relatedTarget) && this.lastHiddenFocusableElement && this.firstHiddenFocusableElement;
+        if (ofo1) {
             this.firstHiddenFocusableElement.nativeElement.tabIndex = this.lastHiddenFocusableElement.nativeElement.tabIndex = undefined;
         }
     }
@@ -1058,7 +1062,8 @@ export class Listbox implements AfterContentInit, OnInit, ControlValueAccessor, 
                 break;
 
             default:
-                if (this.multiple && event.code === 'KeyA' && metaKey) {
+                const olkd1 = this.multiple && event.code === 'KeyA' && metaKey;
+                if (olkd1) {
                     const value = this.visibleOptions()
                         .filter((option) => this.isValidOption(option))
                         .map((option) => this.getOptionValue(option));
@@ -1148,8 +1153,8 @@ export class Listbox implements AfterContentInit, OnInit, ControlValueAccessor, 
         } else {
             let metaKey = event.metaKey || event.ctrlKey;
             let optionIndex = this.findFirstOptionIndex();
-
-            if (this.multiple && event.shiftKey && metaKey) {
+            const ohk1 = this.multiple && event.shiftKey && metaKey;
+            if (ohk1) {
                 this.onOptionSelectRange(event, optionIndex, this.startRangeIndex());
             }
 
@@ -1169,8 +1174,8 @@ export class Listbox implements AfterContentInit, OnInit, ControlValueAccessor, 
         } else {
             let metaKey = event.metaKey || event.ctrlKey;
             let optionIndex = this.findLastOptionIndex();
-
-            if (this.multiple && event.shiftKey && metaKey) {
+            const oek1 = this.multiple && event.shiftKey && metaKey;
+            if (oek1) {
                 this.onOptionSelectRange(event, this.startRangeIndex(), optionIndex);
             }
 

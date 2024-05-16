@@ -836,7 +836,8 @@ export class TreeTable implements AfterContentInit, OnInit, OnDestroy, Blockable
     toggleRowIndex: Nullable<number>;
 
     ngOnInit() {
-        if (this.lazy && this.lazyLoadOnInit && !this.virtualScroll) {
+        const noi1 = this.lazy && this.lazyLoadOnInit && !this.virtualScroll;
+        if (noi1) {
             this.onLazyLoad.emit(this.createLazyLoadMetadata());
         }
         this.initialized = true;
@@ -848,99 +849,75 @@ export class TreeTable implements AfterContentInit, OnInit, OnDestroy, Blockable
                 case 'caption':
                     this.captionTemplate = item.template;
                     break;
-
                 case 'header':
                     this.headerTemplate = item.template;
                     break;
-
                 case 'body':
                     this.bodyTemplate = item.template;
                     break;
-
                 case 'footer':
                     this.footerTemplate = item.template;
                     break;
-
                 case 'summary':
                     this.summaryTemplate = item.template;
                     break;
-
                 case 'colgroup':
                     this.colGroupTemplate = item.template;
                     break;
-
                 case 'emptymessage':
                     this.emptyMessageTemplate = item.template;
                     break;
-
                 case 'paginatorleft':
                     this.paginatorLeftTemplate = item.template;
                     break;
-
                 case 'paginatorright':
                     this.paginatorRightTemplate = item.template;
                     break;
-
                 case 'paginatordropdownitem':
                     this.paginatorDropdownItemTemplate = item.template;
                     break;
-
                 case 'frozenheader':
                     this.frozenHeaderTemplate = item.template;
                     break;
-
                 case 'frozenbody':
                     this.frozenBodyTemplate = item.template;
                     break;
-
                 case 'frozenfooter':
                     this.frozenFooterTemplate = item.template;
                     break;
-
                 case 'frozencolgroup':
                     this.frozenColGroupTemplate = item.template;
                     break;
-
                 case 'loadingicon':
                     this.loadingIconTemplate = item.template;
                     break;
-
                 case 'reorderindicatorupicon':
                     this.reorderIndicatorUpIconTemplate = item.template;
                     break;
-
                 case 'reorderindicatordownicon':
                     this.reorderIndicatorDownIconTemplate = item.template;
                     break;
-
                 case 'sorticon':
                     this.sortIconTemplate = item.template;
                     break;
-
                 case 'checkboxicon':
                     this.checkboxIconTemplate = item.template;
                     break;
-
                 case 'headercheckboxicon':
                     this.headerCheckboxIconTemplate = item.template;
                     break;
-
                 case 'togglericon':
                     this.togglerIconTemplate = item.template;
                     break;
-
                 case 'paginatorfirstpagelinkicon':
                     this.paginatorFirstPageLinkIconTemplate = item.template;
                     break;
-
                 case 'paginatorlastpagelinkicon':
                     this.paginatorLastPageLinkIconTemplate = item.template;
                     break;
-
                 case 'paginatorpreviouspagelinkicon':
                     this.paginatorPreviousPageLinkIconTemplate = item.template;
                     break;
-
                 case 'paginatornextpagelinkicon':
                     this.paginatorNextPageLinkIconTemplate = item.template;
                     break;
@@ -1492,7 +1469,8 @@ export class TreeTable implements AfterContentInit, OnInit, OnDestroy, Blockable
     }
 
     onColumnDragEnter(event: DragEvent, dropHeader: any) {
-        if (this.reorderableColumns && this.draggedColumn && dropHeader) {
+        const ocde1 = this.reorderableColumns && this.draggedColumn && dropHeader;
+        if (ocde1) {
             event.preventDefault();
             let containerOffset = DomHandler.getOffset(this.containerViewChild?.nativeElement);
             let dropHeaderOffset = DomHandler.getOffset(dropHeader);
@@ -1537,15 +1515,16 @@ export class TreeTable implements AfterContentInit, OnInit, OnDestroy, Blockable
             let dragIndex = DomHandler.indexWithinGroup(this.draggedColumn, 'ttreorderablecolumn');
             let dropIndex = DomHandler.indexWithinGroup(dropColumn, 'ttreorderablecolumn');
             let allowDrop = dragIndex != dropIndex;
-            if (allowDrop && ((dropIndex - dragIndex == 1 && this.dropPosition === -1) || (dragIndex - dropIndex == 1 && this.dropPosition === 1))) {
+            const ocd1 = allowDrop && ((dropIndex - dragIndex == 1 && this.dropPosition === -1) || (dragIndex - dropIndex == 1 && this.dropPosition === 1));
+            if (ocd1) {
                 allowDrop = false;
             }
-
-            if (allowDrop && dropIndex < dragIndex && this.dropPosition === 1) {
+            const ocd2 = allowDrop && dropIndex < dragIndex && this.dropPosition === 1;
+            if (ocd2) {
                 dropIndex = dropIndex + 1;
             }
-
-            if (allowDrop && dropIndex > dragIndex && this.dropPosition === -1) {
+            const ocd3 = allowDrop && dropIndex > dragIndex && this.dropPosition === -1;
+            if (ocd3) {
                 dropIndex = dropIndex - 1;
             }
 
@@ -1569,7 +1548,8 @@ export class TreeTable implements AfterContentInit, OnInit, OnDestroy, Blockable
 
     handleRowClick(event: any) {
         let targetNode = (<HTMLElement>event.originalEvent.target).nodeName;
-        if (targetNode == 'INPUT' || targetNode == 'BUTTON' || targetNode == 'A' || DomHandler.hasClass(event.originalEvent.target, 'p-clickable')) {
+        const hrc1 = targetNode == 'INPUT' || targetNode == 'BUTTON' || targetNode == 'A' || DomHandler.hasClass(event.originalEvent.target, 'p-clickable');
+        if (hrc1) {
             return;
         }
 
@@ -1778,8 +1758,8 @@ export class TreeTable implements AfterContentInit, OnInit, OnDestroy, Blockable
                         }
                     }
                 }
-
-                if (childPartialSelected || (selectedChildCount > 0 && selectedChildCount != node.children.length)) node.partialSelected = true;
+                const psu1 = childPartialSelected || (selectedChildCount > 0 && selectedChildCount != node.children.length);
+                if (psu1) node.partialSelected = true;
                 else node.partialSelected = false;
             }
         }
@@ -1877,7 +1857,8 @@ export class TreeTable implements AfterContentInit, OnInit, OnDestroy, Blockable
 
     isFilterBlank(filter: any): boolean {
         if (filter !== null && filter !== undefined) {
-            if ((typeof filter === 'string' && filter.trim().length == 0) || (Array.isArray(filter) && filter.length == 0)) return true;
+            const ifb1 = (typeof filter === 'string' && filter.trim().length == 0) || (Array.isArray(filter) && filter.length == 0);
+            if (ifb1) return true;
             else return false;
         }
         return true;
@@ -1921,30 +1902,23 @@ export class TreeTable implements AfterContentInit, OnInit, OnDestroy, Blockable
                             let filterMatchMode = filterMeta.matchMode || 'startsWith';
                             let filterConstraint = (<any>this.filterService).filters[filterMatchMode];
                             paramsWithoutNode = { filterField, filterValue, filterConstraint, isStrictMode };
-                            if (
-                                (isStrictMode && !(this.findFilteredNodes(copyNode, paramsWithoutNode) || this.isFilterMatched(copyNode, paramsWithoutNode))) ||
-                                (!isStrictMode && !(this.isFilterMatched(copyNode, paramsWithoutNode) || this.findFilteredNodes(copyNode, paramsWithoutNode)))
-                            ) {
-                                localMatch = false;
-                            }
+                            const f1 = (isStrictMode && !(this.findFilteredNodes(copyNode, paramsWithoutNode) || this.isFilterMatched(copyNode, paramsWithoutNode))) ||
+                            (!isStrictMode && !(this.isFilterMatched(copyNode, paramsWithoutNode) || this.findFilteredNodes(copyNode, paramsWithoutNode)));
+                            if (f1) localMatch = false;
 
-                            if (!localMatch) {
-                                break;
-                            }
+                            if (!localMatch) break;
                         }
                     }
-
-                    if (this.filters['global'] && !globalMatch && globalFilterFieldsArray) {
+                    const f2 = this.filters['global'] && !globalMatch && globalFilterFieldsArray;
+                    if (f2) {
                         let copyNodeForGlobal = { ...copyNode };
                         let filterField = undefined;
                         let filterValue = this.filters['global'].value;
                         let filterConstraint = (<any>this.filterService).filters[(<any>this.filters)['global'].matchMode];
                         paramsWithoutNode = { filterField, filterValue, filterConstraint, isStrictMode, globalFilterFieldsArray };
-
-                        if (
-                            (isStrictMode && (this.findFilteredNodes(copyNodeForGlobal, paramsWithoutNode) || this.isFilterMatched(copyNodeForGlobal, paramsWithoutNode))) ||
-                            (!isStrictMode && (this.isFilterMatched(copyNodeForGlobal, paramsWithoutNode) || this.findFilteredNodes(copyNodeForGlobal, paramsWithoutNode)))
-                        ) {
+                        const f3 = (isStrictMode && (this.findFilteredNodes(copyNodeForGlobal, paramsWithoutNode) || this.isFilterMatched(copyNodeForGlobal, paramsWithoutNode))) ||
+                        (!isStrictMode && (this.isFilterMatched(copyNodeForGlobal, paramsWithoutNode) || this.findFilteredNodes(copyNodeForGlobal, paramsWithoutNode)));
+                        if (f3) {
                             globalMatch = true;
                             copyNode = copyNodeForGlobal;
                         }
@@ -2017,8 +1991,8 @@ export class TreeTable implements AfterContentInit, OnInit, OnDestroy, Blockable
         const isMatched = (field: string) => filterConstraint(ObjectUtils.resolveFieldData(node.data, field), filterValue, <string>this.filterLocale);
 
         matched = globalFilterFieldsArray?.length ? globalFilterFieldsArray.some((globalFilterField) => isMatched(globalFilterField.field || globalFilterField)) : isMatched(filterField);
-
-        if (!matched || (isStrictMode && !this.isNodeLeaf(node))) {
+        const ifm1 = !matched || (isStrictMode && !this.isNodeLeaf(node));
+        if (ifm1) {
             matched = this.findFilteredNodes(node, { filterField, filterValue, filterConstraint, isStrictMode, globalFilterFieldsArray }) || matched;
         }
 
@@ -2076,7 +2050,8 @@ export class TreeTable implements AfterContentInit, OnInit, OnDestroy, Blockable
     bindDocumentEditListener() {
         if (!this.documentEditListener) {
             this.documentEditListener = this.renderer.listen(this.document, 'click', (event) => {
-                if (this.editingCell && !this.editingCellClick && this.isEditingCellValid()) {
+                const bdel1 = this.editingCell && !this.editingCellClick && this.isEditingCellValid();
+                if (bdel1) {
                     DomHandler.removeClass(this.editingCell, 'p-cell-editing');
                     this.editingCell = null;
                     this.onEditComplete.emit({ field: this.editingCellField, data: this.editingCellData });
@@ -2272,7 +2247,8 @@ export class TTScrollableView implements AfterViewInit, OnDestroy {
     }
     set scrollHeight(val: string | undefined | null) {
         this._scrollHeight = val;
-        if (val != null && (val.includes('%') || val.includes('calc'))) {
+        const abc1 = val != null && (val.includes('%') || val.includes('calc'));
+        if (abc1) {
             console.log('Percentage scroll height calculation is removed in favor of the more performant CSS based flex mode, use scrollHeight="flex" instead.');
         }
     }
@@ -2706,7 +2682,8 @@ export class TTReorderableColumn implements AfterViewInit, OnDestroy {
     }
 
     onMouseDown(event: any) {
-        if (event.target.nodeName === 'INPUT' || event.target.nodeName === 'TEXTAREA' || DomHandler.hasClass(event.target, 'p-column-resizer')) this.el.nativeElement.draggable = false;
+        const omd1 = event.target.nodeName === 'INPUT' || event.target.nodeName === 'TEXTAREA' || DomHandler.hasClass(event.target, 'p-column-resizer');
+        if (omd1) this.el.nativeElement.draggable = false;
         else this.el.nativeElement.draggable = true;
     }
 
@@ -3395,8 +3372,8 @@ export class TTRow {
     onArrowRightKey(event: KeyboardEvent) {
         const currentTarget = <HTMLElement>event.currentTarget;
         const isHiddenIcon = DomHandler.findSingle(currentTarget, 'button').style.visibility === 'hidden';
-
-        if (!isHiddenIcon && !this.expanded && this.rowNode.node['children']) {
+        const oark1 = !isHiddenIcon && !this.expanded && this.rowNode.node['children'];
+        if (oark1) {
             this.expand(event);
 
             currentTarget.tabIndex = -1;
