@@ -687,50 +687,36 @@ export class Listbox implements AfterContentInit, OnInit, ControlValueAccessor, 
     }
 
     ngAfterContentInit() {
+        const templateMap = new Map<string, TemplateRef<any>>([
+          ['item', null],
+          ['group', null],
+          ['header', null],
+          ['filter', null],
+          ['footer', null],
+          ['empty', null],
+          ['emptyfilter', null],
+          ['filtericon', null],
+          ['checkicon', null],
+        ]);
+      
         this.templates.forEach((item) => {
-            switch (item.getType()) {
-                case 'item':
-                    this.itemTemplate = item.template;
-                    break;
-
-                case 'group':
-                    this.groupTemplate = item.template;
-                    break;
-
-                case 'header':
-                    this.headerTemplate = item.template;
-                    break;
-
-                case 'filter':
-                    this.filterTemplate = item.template;
-                    break;
-
-                case 'footer':
-                    this.footerTemplate = item.template;
-                    break;
-
-                case 'empty':
-                    this.emptyTemplate = item.template;
-                    break;
-
-                case 'emptyfilter':
-                    this.emptyFilterTemplate = item.template;
-                    break;
-
-                case 'filtericon':
-                    this.filterIconTemplate = item.template;
-                    break;
-
-                case 'checkicon':
-                    this.checkIconTemplate = item.template;
-                    break;
-
-                default:
-                    this.itemTemplate = item.template;
-                    break;
-            }
+          const type = item.getType();
+          if (templateMap.has(type)) {
+            templateMap.set(type, item.template);
+          }
         });
-    }
+      
+        this.itemTemplate = templateMap.get('item');
+        this.groupTemplate = templateMap.get('group');
+        this.headerTemplate = templateMap.get('header');
+        this.filterTemplate = templateMap.get('filter');
+        this.footerTemplate = templateMap.get('footer');
+        this.emptyTemplate = templateMap.get('empty');
+        this.emptyFilterTemplate = templateMap.get('emptyfilter');
+        this.filterIconTemplate = templateMap.get('filtericon');
+        this.checkIconTemplate = templateMap.get('checkicon');
+      }
+      
 
     writeValue(value: any): void {
         this.value = value;

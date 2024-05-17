@@ -844,86 +844,44 @@ export class TreeTable implements AfterContentInit, OnInit, OnDestroy, Blockable
     }
 
     ngAfterContentInit() {
+        const templateMappings: { [key: string]: TemplateRef<any> } = {
+            'caption': this.captionTemplate,
+            'header': this.headerTemplate,
+            'body': this.bodyTemplate,
+            'footer': this.footerTemplate,
+            'summary': this.summaryTemplate,
+            'colgroup': this.colGroupTemplate,
+            'emptymessage': this.emptyMessageTemplate,
+            'paginatorleft': this.paginatorLeftTemplate,
+            'paginatorright': this.paginatorRightTemplate,
+            'paginatordropdownitem': this.paginatorDropdownItemTemplate,
+            'frozenheader': this.frozenHeaderTemplate,
+            'frozenbody': this.frozenBodyTemplate,
+            'frozenfooter': this.frozenFooterTemplate,
+            'frozencolgroup': this.frozenColGroupTemplate,
+            'loadingicon': this.loadingIconTemplate,
+            'reorderindicatorupicon': this.reorderIndicatorUpIconTemplate,
+            'reorderindicatordownicon': this.reorderIndicatorDownIconTemplate,
+            'sorticon': this.sortIconTemplate,
+            'checkboxicon': this.checkboxIconTemplate,
+            'headercheckboxicon': this.headerCheckboxIconTemplate,
+            'togglericon': this.togglerIconTemplate,
+            'paginatorfirstpagelinkicon': this.paginatorFirstPageLinkIconTemplate,
+            'paginatorlastpagelinkicon': this.paginatorLastPageLinkIconTemplate,
+            'paginatorpreviouspagelinkicon': this.paginatorPreviousPageLinkIconTemplate,
+            'paginatornextpagelinkicon': this.paginatorNextPageLinkIconTemplate,
+        };
+    
         (this.templates as QueryList<PrimeTemplate>).forEach((item) => {
-            switch (item.getType()) {
-                case 'caption':
-                    this.captionTemplate = item.template;
-                    break;
-                case 'header':
-                    this.headerTemplate = item.template;
-                    break;
-                case 'body':
-                    this.bodyTemplate = item.template;
-                    break;
-                case 'footer':
-                    this.footerTemplate = item.template;
-                    break;
-                case 'summary':
-                    this.summaryTemplate = item.template;
-                    break;
-                case 'colgroup':
-                    this.colGroupTemplate = item.template;
-                    break;
-                case 'emptymessage':
-                    this.emptyMessageTemplate = item.template;
-                    break;
-                case 'paginatorleft':
-                    this.paginatorLeftTemplate = item.template;
-                    break;
-                case 'paginatorright':
-                    this.paginatorRightTemplate = item.template;
-                    break;
-                case 'paginatordropdownitem':
-                    this.paginatorDropdownItemTemplate = item.template;
-                    break;
-                case 'frozenheader':
-                    this.frozenHeaderTemplate = item.template;
-                    break;
-                case 'frozenbody':
-                    this.frozenBodyTemplate = item.template;
-                    break;
-                case 'frozenfooter':
-                    this.frozenFooterTemplate = item.template;
-                    break;
-                case 'frozencolgroup':
-                    this.frozenColGroupTemplate = item.template;
-                    break;
-                case 'loadingicon':
-                    this.loadingIconTemplate = item.template;
-                    break;
-                case 'reorderindicatorupicon':
-                    this.reorderIndicatorUpIconTemplate = item.template;
-                    break;
-                case 'reorderindicatordownicon':
-                    this.reorderIndicatorDownIconTemplate = item.template;
-                    break;
-                case 'sorticon':
-                    this.sortIconTemplate = item.template;
-                    break;
-                case 'checkboxicon':
-                    this.checkboxIconTemplate = item.template;
-                    break;
-                case 'headercheckboxicon':
-                    this.headerCheckboxIconTemplate = item.template;
-                    break;
-                case 'togglericon':
-                    this.togglerIconTemplate = item.template;
-                    break;
-                case 'paginatorfirstpagelinkicon':
-                    this.paginatorFirstPageLinkIconTemplate = item.template;
-                    break;
-                case 'paginatorlastpagelinkicon':
-                    this.paginatorLastPageLinkIconTemplate = item.template;
-                    break;
-                case 'paginatorpreviouspagelinkicon':
-                    this.paginatorPreviousPageLinkIconTemplate = item.template;
-                    break;
-                case 'paginatornextpagelinkicon':
-                    this.paginatorNextPageLinkIconTemplate = item.template;
-                    break;
+            const templateType = item.getType();
+            const template = item.template;
+    
+            if (templateMappings.hasOwnProperty(templateType)) {
+                templateMappings[templateType] = template;
             }
         });
     }
+    
 
     constructor(@Inject(DOCUMENT) private document: Document, private renderer: Renderer2, public el: ElementRef, public cd: ChangeDetectorRef, public zone: NgZone, public tableService: TreeTableService, public filterService: FilterService) {}
 
@@ -1133,34 +1091,40 @@ export class TreeTable implements AfterContentInit, OnInit, OnDestroy, Blockable
         if (!nodes || nodes.length === 0) {
             return;
         }
-
+    
         if (this.customSort) {
-            this.sortFunction.emit({
-                data: nodes,
-                mode: this.sortMode,
-                field: <string>this.sortField,
-                order: this.sortOrder
-            });
+            this.emitCustomSort(nodes);
         } else {
-            nodes.sort((node1, node2) => {
-                let value1 = ObjectUtils.resolveFieldData(node1.data, this.sortField);
-                let value2 = ObjectUtils.resolveFieldData(node2.data, this.sortField);
-                let result = null;
-
-                if (value1 == null && value2 != null) result = -1;
-                else if (value1 != null && value2 == null) result = 1;
-                else if (value1 == null && value2 == null) result = 0;
-                else if (typeof value1 === 'string' && typeof value2 === 'string') result = value1.localeCompare(value2, undefined, { numeric: true });
-                else result = value1 < value2 ? -1 : value1 > value2 ? 1 : 0;
-
-                return this.sortOrder * result;
-            });
+            nodes.sort((node1, node2) => this.compareNodes(node1, node2));
         }
-
-        for (let node of nodes) {
-            this.sortNodes(node.children as TreeNode[]);
-        }
+    
+        nodes.forEach(node => this.sortNodes(node.children as TreeNode[]));
     }
+    
+    emitCustomSort(nodes: TreeNode[]) {
+        this.sortFunction.emit({
+            data: nodes,
+            mode: this.sortMode,
+            field: this.sortField as string,
+            order: this.sortOrder
+        });
+    }
+    
+    compareNodes(node1: TreeNode, node2: TreeNode): number {
+        const value1 = ObjectUtils.resolveFieldData(node1.data, this.sortField);
+        const value2 = ObjectUtils.resolveFieldData(node2.data, this.sortField);
+    
+        if (value1 == null && value2 != null) return -1;
+        if (value1 != null && value2 == null) return 1;
+        if (value1 == null && value2 == null) return 0;
+    
+        if (typeof value1 === 'string' && typeof value2 === 'string') {
+            return value1.localeCompare(value2, undefined, { numeric: true }) * this.sortOrder;
+        }
+    
+        return (value1 < value2 ? -1 : value1 > value2 ? 1 : 0) * this.sortOrder;
+    }
+    
 
     sortMultiple() {
         if (this.multiSortMeta) {
@@ -1795,18 +1759,23 @@ export class TreeTable implements AfterContentInit, OnInit, OnDestroy, Blockable
         }
     }
 
-    isSelected(node: TreeTableNode) {
-        if (node && this.selection) {
-            if (this.dataKey) {
-                return this.selectionKeys[ObjectUtils.resolveFieldData(node.data, this.dataKey)] !== undefined;
-            } else {
-                if (Array.isArray(this.selection)) return this.findIndexInSelection(node) > -1;
-                else return this.equals(node, this.selection);
-            }
+    isSelected(node: TreeTableNode): boolean {
+        if (!node || !this.selection) {
+          return false;
         }
-
-        return false;
-    }
+      
+        if (this.dataKey) {
+          const nodeDataKey = ObjectUtils.resolveFieldData(node.data, this.dataKey);
+          return this.selectionKeys[nodeDataKey] !== undefined;
+        }
+      
+        if (Array.isArray(this.selection)) {
+          return this.findIndexInSelection(node) > -1;
+        }
+      
+        return this.equals(node, this.selection);
+      }      
+      
 
     findIndexInSelection(node: any) {
         let index: number = -1;
@@ -1866,103 +1835,97 @@ export class TreeTable implements AfterContentInit, OnInit, OnDestroy, Blockable
 
     _filter() {
         if (this.lazy) {
-            this.onLazyLoad.emit(this.createLazyLoadMetadata());
+          this.onLazyLoad.emit(this.createLazyLoadMetadata());
+          return;
+        }
+      
+        if (!this.value) {
+          return;
+        }
+      
+        if (!this.hasFilter()) {
+          this.filteredNodes = null;
+          if (this.paginator) {
+            this.totalRecords = this.value ? this.value.length : 0;
+          }
         } else {
-            if (!this.value) {
-                return;
-            }
-
-            if (!this.hasFilter()) {
-                this.filteredNodes = null;
-                if (this.paginator) {
-                    this.totalRecords = this.value ? this.value.length : 0;
-                }
-            } else {
-                let globalFilterFieldsArray;
-                if (this.filters['global']) {
-                    if (!this.columns && !this.globalFilterFields) throw new Error('Global filtering requires dynamic columns or globalFilterFields to be defined.');
-                    else globalFilterFieldsArray = this.globalFilterFields || this.columns;
-                }
-
-                this.filteredNodes = [];
-                const isStrictMode = this.filterMode === 'strict';
-                let isValueChanged = false;
-
-                for (let node of this.value) {
-                    let copyNode = { ...node };
-                    let localMatch = true;
-                    let globalMatch = false;
-                    let paramsWithoutNode;
-
-                    for (let prop in this.filters) {
-                        if (this.filters.hasOwnProperty(prop) && prop !== 'global') {
-                            let filterMeta = <FilterMetadata>this.filters[prop];
-                            let filterField = prop;
-                            let filterValue = filterMeta.value;
-                            let filterMatchMode = filterMeta.matchMode || 'startsWith';
-                            let filterConstraint = (<any>this.filterService).filters[filterMatchMode];
-                            paramsWithoutNode = { filterField, filterValue, filterConstraint, isStrictMode };
-                            const f1 = (isStrictMode && !(this.findFilteredNodes(copyNode, paramsWithoutNode) || this.isFilterMatched(copyNode, paramsWithoutNode))) ||
-                            (!isStrictMode && !(this.isFilterMatched(copyNode, paramsWithoutNode) || this.findFilteredNodes(copyNode, paramsWithoutNode)));
-                            if (f1) localMatch = false;
-
-                            if (!localMatch) break;
-                        }
-                    }
-                    const f2 = this.filters['global'] && !globalMatch && globalFilterFieldsArray;
-                    if (f2) {
-                        let copyNodeForGlobal = { ...copyNode };
-                        let filterField = undefined;
-                        let filterValue = this.filters['global'].value;
-                        let filterConstraint = (<any>this.filterService).filters[(<any>this.filters)['global'].matchMode];
-                        paramsWithoutNode = { filterField, filterValue, filterConstraint, isStrictMode, globalFilterFieldsArray };
-                        const f3 = (isStrictMode && (this.findFilteredNodes(copyNodeForGlobal, paramsWithoutNode) || this.isFilterMatched(copyNodeForGlobal, paramsWithoutNode))) ||
-                        (!isStrictMode && (this.isFilterMatched(copyNodeForGlobal, paramsWithoutNode) || this.findFilteredNodes(copyNodeForGlobal, paramsWithoutNode)));
-                        if (f3) {
-                            globalMatch = true;
-                            copyNode = copyNodeForGlobal;
-                        }
-                    }
-
-                    let matches = localMatch;
-                    if (this.filters['global']) {
-                        matches = localMatch && globalMatch;
-                    }
-
-                    if (matches) {
-                        this.filteredNodes.push(copyNode);
-                    }
-
-                    isValueChanged = isValueChanged || !localMatch || globalMatch || (localMatch && this.filteredNodes.length > 0) || (!globalMatch && this.filteredNodes.length === 0);
-                }
-
-                if (!isValueChanged) {
-                    this.filteredNodes = null;
-                }
-
-                if (this.paginator) {
-                    this.totalRecords = this.filteredNodes ? this.filteredNodes.length : this.value ? this.value.length : 0;
-                }
-            }
-            this.cd.markForCheck();
+          this.applyFilters();
         }
-
+      
+        this.cd.markForCheck();
         this.first = 0;
-
-        const filteredValue = this.filteredNodes || this.value;
-
-        this.onFilter.emit({
-            filters: this.filters,
-            filteredValue: filteredValue
-        });
-
-        this.tableService.onUIUpdate(filteredValue);
+        this.emitFilterEvent();
+        this.tableService.onUIUpdate(this.filteredNodes || this.value);
         this.updateSerializedValue();
-
+      
         if (this.scrollable) {
-            this.resetScrollTop();
+          this.resetScrollTop();
         }
-    }
+      }
+      
+      applyFilters() {
+        const isStrictMode = this.filterMode === 'strict';
+        this.filteredNodes = this.value.filter(node => this.matchesFilters(node, isStrictMode));
+      
+        if (this.filters['global']) {
+          this.applyGlobalFilter(isStrictMode);
+        }
+      
+        this.updateTotalRecords();
+      }
+      
+      matchesFilters(node: TreeTableNode, isStrictMode: boolean): boolean {
+        for (let prop in this.filters) {
+          if (this.filters.hasOwnProperty(prop) && prop !== 'global') {
+            const filterMeta = <FilterMetadata>this.filters[prop];
+            const params = this.getFilterParams(prop, filterMeta, isStrictMode);
+            const localMatch = this.applyLocalFilter(node, params);
+            if (!localMatch) {
+              return false;
+            }
+          }
+        }
+        return true;
+      }
+      
+      updateTotalRecords() {
+        if (this.filteredNodes && this.paginator) {
+          this.totalRecords = this.filteredNodes.length;
+        } else if (!this.filteredNodes && this.paginator) {
+          this.totalRecords = this.value ? this.value.length : 0;
+        }
+      }
+      
+      
+      getFilterParams(filterField: string, filterMeta: FilterMetadata, isStrictMode: boolean) {
+        const filterValue = filterMeta.value;
+        const filterConstraint = (<any>this.filterService).filters[filterMeta.matchMode || 'startsWith'];
+        return { filterField, filterValue, filterConstraint, isStrictMode };
+      }
+      
+      applyLocalFilter(node: TreeTableNode, params: any): boolean {
+        const { filterField, filterValue, filterConstraint, isStrictMode } = params;
+        const isMatched = isStrictMode ? this.findFilteredNodes(node, params) || this.isFilterMatched(node, params) : this.isFilterMatched(node, params) || this.findFilteredNodes(node, params);
+        return filterConstraint(filterValue, ObjectUtils.resolveFieldData(node, filterField), this.filterLocale) === isMatched;
+      }
+      
+      applyGlobalFilter(isStrictMode: boolean) {
+        const globalFilterValue = this.filters['global'].value;
+        const globalFilterConstraint = (<any>this.filterService).filters[(<any>this.filters)['global'].matchMode];
+        const globalFilterFieldsArray = this.columns || this.globalFilterFields;
+        const params = { filterField: undefined, filterValue: globalFilterValue, filterConstraint: globalFilterConstraint, isStrictMode, globalFilterFieldsArray };
+      
+        this.filteredNodes = this.filteredNodes.filter(node => {
+          const copyNode = { ...node };
+          return this.applyLocalFilter(copyNode, params);
+        });
+      }
+      
+      emitFilterEvent() {
+        const filteredValue = this.filteredNodes || this.value;
+        this.onFilter.emit({ filters: this.filters, filteredValue });
+      }
+      
 
     findFilteredNodes(node: TreeTableNode, paramsWithoutNode: any) {
         if (node) {
@@ -2256,87 +2219,109 @@ export class TTScrollableView implements AfterViewInit, OnDestroy {
     constructor(@Inject(PLATFORM_ID) private platformId: any, private renderer: Renderer2, public tt: TreeTable, public el: ElementRef, public zone: NgZone) {}
 
     ngAfterViewInit() {
-        if (isPlatformBrowser(this.platformId)) {
-            if (!this.frozen) {
-                if (this.tt.frozenColumns || this.tt.frozenBodyTemplate) {
-                    DomHandler.addClass(this.el.nativeElement, 'p-treetable-unfrozen-view');
-                }
-
-                let frozenView = this.el.nativeElement.previousElementSibling;
-                if (frozenView) {
-                    if (this.tt.virtualScroll) this.frozenSiblingBody = DomHandler.findSingle(frozenView, '.p-scroller-viewport');
-                    else this.frozenSiblingBody = DomHandler.findSingle(frozenView, '.p-treetable-scrollable-body');
-                }
-
-                let scrollBarWidth = DomHandler.calculateScrollbarWidth();
-                (this.scrollHeaderBoxViewChild as ElementRef).nativeElement.style.paddingRight = scrollBarWidth + 'px';
-
-                if (this.scrollFooterBoxViewChild && this.scrollFooterBoxViewChild.nativeElement) {
-                    this.scrollFooterBoxViewChild.nativeElement.style.paddingRight = scrollBarWidth + 'px';
-                }
-            } else {
-                if (this.scrollableAlignerViewChild && this.scrollableAlignerViewChild.nativeElement) {
-                    this.scrollableAlignerViewChild.nativeElement.style.height = DomHandler.calculateScrollbarHeight() + 'px';
-                }
-            }
-
-            this.bindEvents();
+        if (!isPlatformBrowser(this.platformId)) {
+          return;
         }
-    }
+      
+        if (!this.frozen) {
+          this.adjustUnfrozenView();
+        } else {
+          this.adjustFrozenView();
+        }
+      
+        this.bindEvents();
+      }
+      
+      private adjustUnfrozenView() {
+        if (this.tt.frozenColumns || this.tt.frozenBodyTemplate) {
+          DomHandler.addClass(this.el.nativeElement, 'p-treetable-unfrozen-view');
+        }
+      
+        const frozenView = this.el.nativeElement.previousElementSibling;
+        if (frozenView) {
+          this.setFrozenSiblingBody(frozenView);
+        }
+      
+        const scrollBarWidth = DomHandler.calculateScrollbarWidth();
+        this.setPaddingRight(this.scrollHeaderBoxViewChild?.nativeElement, scrollBarWidth);
+        this.setPaddingRight(this.scrollFooterBoxViewChild?.nativeElement, scrollBarWidth);
+      }
+      
+      private adjustFrozenView() {
+        if (this.scrollableAlignerViewChild?.nativeElement) {
+          const scrollbarHeight = DomHandler.calculateScrollbarHeight();
+          this.scrollableAlignerViewChild.nativeElement.style.height = scrollbarHeight + 'px';
+        }
+      }
+      
+      private setFrozenSiblingBody(frozenView: HTMLElement) {
+        if (this.tt.virtualScroll) {
+          this.frozenSiblingBody = DomHandler.findSingle(frozenView, '.p-scroller-viewport');
+        } else {
+          this.frozenSiblingBody = DomHandler.findSingle(frozenView, '.p-treetable-scrollable-body');
+        }
+      }
+      
+      private setPaddingRight(element: HTMLElement | null, paddingRight: number) {
+        if (element) {
+          element.style.paddingRight = paddingRight + 'px';
+        }
+      }
+      
 
     bindEvents() {
-        if (isPlatformBrowser(this.platformId)) {
-            this.zone.runOutsideAngular(() => {
-                if (this.scrollHeaderViewChild && this.scrollHeaderViewChild.nativeElement) {
-                    this.headerScrollListener = this.renderer.listen(this.scrollHeaderBoxViewChild?.nativeElement, 'scroll', this.onHeaderScroll.bind(this));
-                }
-
-                if (this.scrollFooterViewChild && this.scrollFooterViewChild.nativeElement) {
-                    this.footerScrollListener = this.renderer.listen(this.scrollFooterViewChild.nativeElement, 'scroll', this.onFooterScroll.bind(this));
-                }
-
-                if (!this.frozen) {
-                    if (this.tt.virtualScroll) {
-                        this.bodyScrollListener = this.renderer.listen((this.scroller?.getElementRef() as ElementRef).nativeElement, 'scroll', this.onBodyScroll.bind(this));
-                    } else {
-                        this.bodyScrollListener = this.renderer.listen(this.scrollBodyViewChild?.nativeElement, 'scroll', this.onBodyScroll.bind(this));
-                    }
-                }
-            });
+        if (!isPlatformBrowser(this.platformId)) {
+          return;
         }
-    }
+      
+        this.zone.runOutsideAngular(() => {
+          this.bindHeaderScrollListener();
+          this.bindFooterScrollListener();
+          this.bindBodyScrollListener();
+        });
+      }
+      
+      private bindHeaderScrollListener() {
+        if (this.scrollHeaderViewChild?.nativeElement) {
+          this.headerScrollListener = this.renderer.listen(this.scrollHeaderViewChild.nativeElement, 'scroll', this.onHeaderScroll.bind(this));
+        }
+      }
+      
+      private bindFooterScrollListener() {
+        if (this.scrollFooterViewChild?.nativeElement) {
+          this.footerScrollListener = this.renderer.listen(this.scrollFooterViewChild.nativeElement, 'scroll', this.onFooterScroll.bind(this));
+        }
+      }
+      
+      private bindBodyScrollListener() {
+        if (!this.frozen) {
+          if (this.tt.virtualScroll && this.scroller?.getElementRef()?.nativeElement) {
+            this.bodyScrollListener = this.renderer.listen(this.scroller.getElementRef().nativeElement, 'scroll', this.onBodyScroll.bind(this));
+          } else if (this.scrollBodyViewChild?.nativeElement) {
+            this.bodyScrollListener = this.renderer.listen(this.scrollBodyViewChild.nativeElement, 'scroll', this.onBodyScroll.bind(this));
+          }
+        }
+      }
+      
 
     unbindEvents() {
-        if (isPlatformBrowser(this.platformId)) {
-            if (this.scrollHeaderViewChild && this.scrollHeaderViewChild.nativeElement) {
-                if (this.headerScrollListener) {
-                    this.headerScrollListener();
-                    this.headerScrollListener = null;
-                }
-            }
-
-            if (this.scrollFooterViewChild && this.scrollFooterViewChild.nativeElement) {
-                if (this.footerScrollListener) {
-                    this.footerScrollListener();
-                    this.footerScrollListener = null;
-                }
-            }
-
-            if (this.scrollBodyViewChild && this.scrollBodyViewChild.nativeElement) {
-                if (this.bodyScrollListener) {
-                    this.bodyScrollListener();
-                    this.bodyScrollListener = null;
-                }
-            }
-
-            if (this.scroller && this.scroller.getElementRef()) {
-                if (this.bodyScrollListener) {
-                    this.bodyScrollListener();
-                    this.bodyScrollListener = null;
-                }
-            }
+        if (!isPlatformBrowser(this.platformId)) {
+          return;
         }
-    }
+      
+        this.unbindListenerIfElementExists(this.scrollHeaderViewChild, this.headerScrollListener);
+        this.unbindListenerIfElementExists(this.scrollFooterViewChild, this.footerScrollListener);
+        this.unbindListenerIfElementExists(this.scrollBodyViewChild, this.bodyScrollListener);
+        this.unbindListenerIfElementExists(this.scroller?.getElementRef(), this.bodyScrollListener);
+      }
+      
+      private unbindListenerIfElementExists(elementRef: ElementRef<any> | null, listener: (() => void) | null) {
+        if (elementRef?.nativeElement && listener) {
+          listener();
+          listener = null;
+        }
+      }
+      
 
     onHeaderScroll() {
         const scrollLeft = this.scrollHeaderViewChild?.nativeElement.scrollLeft;
@@ -3097,23 +3082,23 @@ export class TTEditableColumn implements AfterViewInit {
 
     @HostListener('click', ['$event'])
     onClick(event: MouseEvent) {
-        if (this.isEnabled()) {
-            this.tt.editingCellClick = true;
-
-            if (this.tt.editingCell) {
-                if (this.tt.editingCell !== this.el.nativeElement) {
-                    if (!this.tt.isEditingCellValid()) {
-                        return;
-                    }
-
-                    DomHandler.removeClass(this.tt.editingCell, 'p-cell-editing');
-                    this.openCell();
-                }
-            } else {
-                this.openCell();
-            }
+        if (!this.isEnabled()) {
+          return;
         }
-    }
+      
+        this.tt.editingCellClick = true;
+      
+        if (this.tt.editingCell && this.tt.editingCell !== this.el.nativeElement) {
+          if (!this.tt.isEditingCellValid()) {
+            return;
+          }
+      
+          DomHandler.removeClass(this.tt.editingCell, 'p-cell-editing');
+        }
+      
+        this.openCell();
+      }
+      
 
     openCell() {
         this.tt.updateEditingCell(this.el.nativeElement, this.data, this.field);
@@ -3138,38 +3123,49 @@ export class TTEditableColumn implements AfterViewInit {
 
     @HostListener('keydown', ['$event'])
     onKeyDown(event: KeyboardEvent) {
-        if (this.isEnabled()) {
-            //enter
-            if (event.keyCode == 13 && !event.shiftKey) {
-                if (this.tt.isEditingCellValid()) {
-                    DomHandler.removeClass(this.tt.editingCell, 'p-cell-editing');
-                    this.closeEditingCell();
-                    this.tt.onEditComplete.emit({ field: this.field, data: this.data });
-                }
-
-                event.preventDefault();
-            }
-
-            //escape
-            else if (event.keyCode == 27) {
-                if (this.tt.isEditingCellValid()) {
-                    DomHandler.removeClass(this.tt.editingCell, 'p-cell-editing');
-                    this.closeEditingCell();
-                    this.tt.onEditCancel.emit({ field: this.field, data: this.data });
-                }
-
-                event.preventDefault();
-            }
-
-            //tab
-            else if (event.keyCode == 9) {
-                this.tt.onEditComplete.emit({ field: this.field, data: this.data });
-
-                if (event.shiftKey) this.moveToPreviousCell(event);
-                else this.moveToNextCell(event);
-            }
+        if (!this.isEnabled()) {
+          return;
         }
-    }
+      
+        switch (event.keyCode) {
+          case 13: // Enter
+            this.handleEnterKey(event);
+            break;
+          case 27: // Escape
+            this.handleEscapeKey(event);
+            break;
+          case 9: // Tab
+            this.handleTabKey(event);
+            break;
+        }
+      }
+      
+      private handleEnterKey(event: KeyboardEvent) {
+        if (!event.shiftKey && this.tt.isEditingCellValid()) {
+          this.closeEditingCell();
+          this.tt.onEditComplete.emit({ field: this.field, data: this.data });
+          event.preventDefault();
+        }
+      }
+      
+      private handleEscapeKey(event: KeyboardEvent) {
+        if (this.tt.isEditingCellValid()) {
+          this.closeEditingCell();
+          this.tt.onEditCancel.emit({ field: this.field, data: this.data });
+          event.preventDefault();
+        }
+      }
+      
+      private handleTabKey(event: KeyboardEvent) {
+        this.tt.onEditComplete.emit({ field: this.field, data: this.data });
+      
+        if (event.shiftKey) {
+          this.moveToPreviousCell(event);
+        } else {
+          this.moveToNextCell(event);
+        }
+      }
+      
 
     findCell(element: any) {
         if (element) {
@@ -3206,41 +3202,62 @@ export class TTEditableColumn implements AfterViewInit {
         }
     }
 
-    findPreviousEditableColumn(cell: any): Element | null {
+    findPreviousEditableColumn(cell: Element): Element | null {
+        let prevCell = this.getPreviousCell(cell);
+      
+        while (prevCell) {
+          if (DomHandler.hasClass(prevCell, 'p-editable-column')) {
+            return prevCell;
+          } else {
+            prevCell = this.getPreviousCell(prevCell);
+          }
+        }
+      
+        return null;
+      }
+      
+      getPreviousCell(cell: Element): Element | null {
         let prevCell = cell.previousElementSibling;
-
+      
         if (!prevCell) {
-            let previousRow = cell.parentElement ? cell.parentElement.previousElementSibling : null;
-            if (previousRow) {
-                prevCell = previousRow.lastElementChild;
-            }
+          const prevRow = cell.parentElement?.previousElementSibling;
+          if (prevRow) {
+            prevCell = prevRow.querySelector('.p-editable-column:last-child');
+          }
         }
-
-        if (prevCell) {
-            if (DomHandler.hasClass(prevCell, 'p-editable-column')) return prevCell;
-            else return this.findPreviousEditableColumn(prevCell);
-        } else {
-            return null;
-        }
-    }
+      
+        return prevCell;
+      }
+      
 
     findNextEditableColumn(cell: Element): Element | null {
+        let nextCell = this.getNextCell(cell);
+      
+        while (nextCell) {
+          if (DomHandler.hasClass(nextCell, 'p-editable-column')) {
+            return nextCell;
+          } else {
+            nextCell = this.getNextCell(nextCell);
+          }
+        }
+      
+        return null;
+      }
+      
+      getNextCell(cell: Element): Element | null {
         let nextCell = cell.nextElementSibling;
-
+      
         if (!nextCell) {
-            let nextRow = cell.parentElement ? cell.parentElement.nextElementSibling : null;
-            if (nextRow) {
-                nextCell = nextRow.firstElementChild;
-            }
+          const nextRow = cell.parentElement?.nextElementSibling;
+          if (nextRow) {
+            nextCell = nextRow.firstElementChild;
+          }
         }
-
-        if (nextCell) {
-            if (DomHandler.hasClass(nextCell, 'p-editable-column')) return nextCell;
-            else return this.findNextEditableColumn(nextCell);
-        } else {
-            return null;
-        }
-    }
+      
+        return nextCell;
+      }
+      
+      
 
     isEnabled() {
         return this.ttEditableColumnDisabled !== true;
