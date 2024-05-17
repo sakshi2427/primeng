@@ -3408,79 +3408,99 @@ setMultipleSelection(value) {
         if (!date) {
             return '';
         }
-
-        let iFormat!: any;
-        const lookAhead = (match: string) => {
-                const matches = iFormat + 1 < format.length && format.charAt(iFormat + 1) === match;
-                if (matches) {
-                    iFormat++;
-                }
-                return matches;
-            },
-            formatNumber = (match: string, value: any, len: any) => {
-                let num = '' + value;
-                if (lookAhead(match)) {
-                    while (num.length < len) {
-                        num = '0' + num;
-                    }
-                }
-                return num;
-            },
-            formatName = (match: string, value: any, shortNames: any, longNames: any) => {
-                return lookAhead(match) ? longNames[value] : shortNames[value];
-            };
+    
         let output = '';
         let literal = false;
-
-        if (date) {
-            for (iFormat = 0; iFormat < format.length; iFormat++) {
-                if (literal) {
-                    if (format.charAt(iFormat) === "'" && !lookAhead("'")) {
-                        literal = false;
-                    } else {
-                        output += format.charAt(iFormat);
-                    }
+    
+        const context = { format, iFormat: 0 };
+    
+        for (context.iFormat = 0; context.iFormat < format.length; context.iFormat++) {
+            const char = format.charAt(context.iFormat);
+    
+            if (literal) {
+                if (char === "'" && !this.checkAhead(context, "'")) {
+                    literal = false;
                 } else {
-                    switch (format.charAt(iFormat)) {
-                        case 'd':
-                            output += formatNumber('d', date.getDate(), 2);
-                            break;
-                        case 'D':
-                            output += formatName('D', date.getDay(), this.getTranslation(TranslationKeys.DAY_NAMES_SHORT), this.getTranslation(TranslationKeys.DAY_NAMES));
-                            break;
-                        case 'o':
-                            output += formatNumber('o', Math.round((new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000), 3);
-                            break;
-                        case 'm':
-                            output += formatNumber('m', date.getMonth() + 1, 2);
-                            break;
-                        case 'M':
-                            output += formatName('M', date.getMonth(), this.getTranslation(TranslationKeys.MONTH_NAMES_SHORT), this.getTranslation(TranslationKeys.MONTH_NAMES));
-                            break;
-                        case 'y':
-                            output += lookAhead('y') ? date.getFullYear() : (date.getFullYear() % 100 < 10 ? '0' : '') + (date.getFullYear() % 100);
-                            break;
-                        case '@':
-                            output += date.getTime();
-                            break;
-                        case '!':
-                            output += date.getTime() * 10000 + <number>this.ticksTo1970;
-                            break;
-                        case "'":
-                            if (lookAhead("'")) {
-                                output += "'";
-                            } else {
-                                literal = true;
-                            }
-                            break;
-                        default:
-                            output += format.charAt(iFormat);
-                    }
+                    output += char;
+                }
+            } else {
+                output += this.processFormatChar(date, context, char);
+                if (char === "'") {
+                    literal = !this.checkAhead(context, "'");
                 }
             }
         }
+    
         return output;
     }
+    
+    checkAhead(context: any, match: string): boolean {
+        const { format, iFormat } = context;
+        const matches = iFormat + 1 < format.length && format.charAt(iFormat + 1) === match;
+        if (matches) {
+            context.iFormat++;
+        }
+        return matches;
+    }
+    
+    formatNumeric(match: string, value: any, len: number, context: any): string {
+        let num = '' + value;
+        if (this.checkAhead(context, match)) {
+            while (num.length < len) {
+                num = '0' + num;
+            }
+        }
+        return num;
+    }
+    
+    formatText(match: string, value: any, shortNames: string[], longNames: string[], context: any): string {
+        return this.checkAhead(context, match) ? longNames[value] : shortNames[value];
+    }
+    
+    processFormatChar(date: any, context: any, char: string): string {
+        switch (char) {
+            case 'd':
+                return this.formatNumeric('d', date.getDate(), 2, context);
+            case 'D':
+                return this.formatDayName(date, context);
+            case 'o':
+                return this.formatNumeric('o', this.getDayOfYear(date), 3, context);
+            case 'm':
+                return this.formatNumeric('m', date.getMonth() + 1, 2, context);
+            case 'M':
+                return this.formatMonthName(date, context);
+            case 'y':
+                return this.formatFullYear(date, context);
+            case '@':
+                return '' + date.getTime();
+            case '!':
+                return '' + (date.getTime() * 10000 + <number>this.ticksTo1970);
+            case "'":
+                return "'";
+            default:
+                return char;
+        }
+    }
+    
+    getDayOfYear(date: Date): number {
+        const start = new Date(date.getFullYear(), 0, 0);
+        const diff = (date.getTime() - start.getTime()) + ((start.getTimezoneOffset() - date.getTimezoneOffset()) * 60 * 1000);
+        return Math.floor(diff / 86400000);
+    }
+    
+    formatFullYear(date: Date, context: any): string {
+        const year = date.getFullYear();
+        return this.checkAhead(context, 'y') ? '' + year : (year % 100 < 10 ? '0' : '') + (year % 100);
+    }
+    
+    formatDayName(date: Date, context: any): string {
+        return this.formatText('D', date.getDay(), this.getTranslation(TranslationKeys.DAY_NAMES_SHORT), this.getTranslation(TranslationKeys.DAY_NAMES), context);
+    }
+    
+    formatMonthName(date: Date, context: any): string {
+        return this.formatText('M', date.getMonth(), this.getTranslation(TranslationKeys.MONTH_NAMES_SHORT), this.getTranslation(TranslationKeys.MONTH_NAMES), context);
+    }
+    
 
         formatTime(date: any) {
         if (!date) {
@@ -3621,178 +3641,281 @@ adjustHourFor12Hour(hour) {
 
     // Ported from jquery-ui datepicker parseDate
     parseDate(value: any, format: any) {
-        if (format == null || value == null) {
-            throw 'Invalid arguments';
+        if (!format || !value) {
+            throw new Error('Invalid arguments');
         }
-
+    
         value = typeof value === 'object' ? value.toString() : value + '';
         if (value === '') {
             return null;
         }
-
-        let iFormat!: any,
-            dim,
-            extra,
-            iValue = 0,
-            shortYearCutoff = typeof this.shortYearCutoff !== 'string' ? this.shortYearCutoff : (new Date().getFullYear() % 100) + parseInt(this.shortYearCutoff, 10),
-            year = -1,
-            month = -1,
-            day = -1,
-            doy = -1,
-            literal = false,
-            date,
-            lookAhead = (match: any) => {
-                let matches = iFormat + 1 < format.length && format.charAt(iFormat + 1) === match;
-                if (matches) {
-                    iFormat++;
-                }
-                return matches;
-            },
-            getNumber = (match: any) => {
-                let isDoubled = lookAhead(match),
-                    size = match === '@' ? 14 : match === '!' ? 20 : match === 'y' && isDoubled ? 4 : match === 'o' ? 3 : 2,
-                    minSize = match === 'y' ? size : 1,
-                    digits = new RegExp('^\\d{' + minSize + ',' + size + '}'),
-                    num = value.substring(iValue).match(digits);
-                if (!num) {
-                    throw 'Missing number at position ' + iValue;
-                }
-                iValue += num[0].length;
-                return parseInt(num[0], 10);
-            },
-            getName = (match: any, shortNames: any, longNames: any) => {
-                let index = -1;
-                let arr = lookAhead(match) ? longNames : shortNames;
-                let names = [];
-
-                for (let i = 0; i < arr.length; i++) {
-                    names.push([i, arr[i]]);
-                }
-                names.sort((a, b) => {
-                    return -(a[1].length - b[1].length);
-                });
-
-                for (let i = 0; i < names.length; i++) {
-                    let name = names[i][1];
-                    if (value.substr(iValue, name.length).toLowerCase() === name.toLowerCase()) {
-                        index = names[i][0];
-                        iValue += name.length;
-                        break;
-                    }
-                }
-
-                if (index !== -1) {
-                    return index + 1;
-                } else {
-                    throw 'Unknown name at position ' + iValue;
-                }
-            },
-            checkLiteral = () => {
-  if (value.charAt(iValue) !== format.charAt(iFormat)) {
-    const errorMessage = `Unexpected literal at position ${iValue}`;
-    throw errorMessage;
-  }
-
-  iValue++;
-};
-
-
+    
+        const shortYearCutoff = this.getShortYearCutoff();
+        let context = this.initializeContext(format, value, shortYearCutoff);
+    
         if (this.view === 'month') {
-            day = 1;
+            context.day = 1;
         }
-
-        for (iFormat = 0; iFormat < format.length; iFormat++) {
-            if (literal) {
-                if (format.charAt(iFormat) === "'" && !lookAhead("'")) {
-                    literal = false;
-                } else {
-                    checkLiteral();
-                }
-            } else {
-                switch (format.charAt(iFormat)) {
-                    case 'd':
-                        day = getNumber('d');
-                        break;
-                    case 'D':
-                        getName('D', this.getTranslation(TranslationKeys.DAY_NAMES_SHORT), this.getTranslation(TranslationKeys.DAY_NAMES));
-                        break;
-                    case 'o':
-                        doy = getNumber('o');
-                        break;
-                    case 'm':
-                        month = getNumber('m');
-                        break;
-                    case 'M':
-                        month = getName('M', this.getTranslation(TranslationKeys.MONTH_NAMES_SHORT), this.getTranslation(TranslationKeys.MONTH_NAMES));
-                        break;
-                    case 'y':
-                        year = getNumber('y');
-                        break;
-                    case '@':
-                        date = new Date(getNumber('@'));
-                        year = date.getFullYear();
-                        month = date.getMonth() + 1;
-                        day = date.getDate();
-                        break;
-                    case '!':
-                        date = new Date((getNumber('!') - <number>this.ticksTo1970) / 10000);
-                        year = date.getFullYear();
-                        month = date.getMonth() + 1;
-                        day = date.getDate();
-                        break;
-                    case "'":
-                        if (lookAhead("'")) {
-                            checkLiteral();
-                        } else {
-                            literal = true;
-                        }
-                        break;
-                    default:
-                        checkLiteral();
-                }
-            }
+    
+        while (context.iFormat < format.length) {
+            this.parseDateCharacter(context);
         }
-
-        if (iValue < value.length) {
-            extra = value.substr(iValue);
-            if (!/^\s+/.test(extra)) {
-                throw 'Extra/unparsed characters found in date: ' + extra;
-            }
+    
+        if (context.iValue < value.length) {
+            this.checkExtraCharacters(context);
         }
-
-        if (year === -1) {
-            year = new Date().getFullYear();
-        } else if (year < 100) {
-            year += new Date().getFullYear() - (new Date().getFullYear() % 100) + (year <= shortYearCutoff ? 0 : -100);
+    
+        context.year = this.resolveYear(context.year, shortYearCutoff);
+    
+        if (context.doy > -1) {
+            this.resolveDayOfYear(context);
         }
-
-        if (doy > -1) {
-            month = 1;
-            day = doy;
-            do {
-                dim = this.getDaysCountInMonth(year, month - 1);
-                if (day <= dim) {
-                    break;
-                }
-                month++;
-                day -= dim;
-            } while (true);
-        }
-
+    
         if (this.view === 'year') {
-            month = month === -1 ? 1 : month;
-            day = day === -1 ? 1 : day;
+            context.month = context.month === -1 ? 1 : context.month;
+            context.day = context.day === -1 ? 1 : context.day;
         }
-
-        date = this.daylightSavingAdjust(new Date(year, month - 1, day));
-        const element_l=date.getFullYear() !== year || date.getMonth() + 1 !== month || date.getDate() !== day
-        if (element_l) {
-            throw 'Invalid date'; // E.g. 31/02/00
-        }
-
+    
+        const date = this.adjustForDaylightSaving(new Date(context.year, context.month - 1, context.day));
+        this.validateDate(date, context);
+    
         return date;
     }
-
+    
+    initializeContext(format: any, value: any, shortYearCutoff: number) {
+        return {
+            format,
+            value,
+            iFormat: 0,
+            iValue: 0,
+            year: -1,
+            month: -1,
+            day: -1,
+            doy: -1,
+            literal: false,
+            shortYearCutoff,
+        };
+    }
+    
+    checkExtraCharacters(context: any) {
+        const extra = context.value.substr(context.iValue);
+        if (!/^\s+/.test(extra)) {
+            throw new Error('Extra/unparsed characters found in date: ' + extra);
+        }
+    }
+    
+    resolveYear(year: number, shortYearCutoff: number) {
+        if (year === -1) {
+            return new Date().getFullYear();
+        } else if (year < 100) {
+            return year + (new Date().getFullYear() - (new Date().getFullYear() % 100)) + (year <= shortYearCutoff ? 0 : -100);
+        }
+        return year;
+    }
+    
+    validateDate(date: Date, context: any) {
+        const bc1 = date.getFullYear() !== context.year || date.getMonth() + 1 !== context.month || date.getDate() !== context.day;
+        if (bc1) {
+            throw new Error('Invalid date');
+        }
+    }
+    
+    
+    getShortYearCutoff(): number {
+        return typeof this.shortYearCutoff !== 'string' 
+            ? this.shortYearCutoff 
+            : (new Date().getFullYear() % 100) + parseInt(this.shortYearCutoff, 10);
+    }
+    
+    parseDateCharacter(context: any) {
+        const char = context.format.charAt(context.iFormat);
+    
+        if (context.literal) {
+            this.handleLiteralCharacter(context, char);
+        } else {
+            this.handleFormatCharacter(context, char);
+        }
+    
+        context.iFormat++;
+    }
+    
+    handleLiteralCharacter(context: any, char: string) {
+        if (char === "'" && !this.lookAhead(context, "'")) {
+            context.literal = false;
+        } else {
+            this.checkLiteral(context);
+        }
+    }
+    
+    handleFormatCharacter(context: any, char: string) {
+        const formatHandlers: { [key: string]: (context: any) => void } = {
+            'd': this.handleDay,
+            'D': this.handleDayName,
+            'o': this.handleDayOfYear,
+            'm': this.handleMonth,
+            'M': this.handleMonthName,
+            'y': this.handleYear,
+            '@': this.handleUnixTime,
+            '!': this.handleTicks,
+            "'": this.handleSingleQuote,
+        };
+    
+        if (formatHandlers[char]) {
+            formatHandlers[char].call(this, context);
+        } else {
+            this.checkLiteral(context);
+        }
+    }
+    
+    handleDay(context: any) {
+        context.day = this.getNumber(context, 'd');
+    }
+    
+    handleDayName(context: any) {
+        this.getName(context, 'D', this.getTranslation(TranslationKeys.DAY_NAMES_SHORT), this.getTranslation(TranslationKeys.DAY_NAMES));
+    }
+    
+    handleDayOfYear(context: any) {
+        context.doy = this.getNumber(context, 'o');
+    }
+    
+    handleMonth(context: any) {
+        context.month = this.getNumber(context, 'm');
+    }
+    
+    handleMonthName(context: any) {
+        this.getName(context, 'M', this.getTranslation(TranslationKeys.MONTH_NAMES_SHORT), this.getTranslation(TranslationKeys.MONTH_NAMES));
+    }
+    
+    handleYear(context: any) {
+        context.year = this.getNumber(context, 'y');
+    }
+    
+    handleUnixTime(context: any) {
+        context.date = new Date(this.getNumber(context, '@'));
+        this.setDateFieldsFromDate(context);
+    }
+    
+    handleTicks(context: any) {
+        context.date = new Date((this.getNumber(context, '!') - <number>this.ticksTo1970) / 10000);
+        this.setDateFieldsFromDate(context);
+    }
+    
+    handleSingleQuote(context: any) {
+        if (this.lookAhead(context, "'")) {
+            this.checkLiteral(context);
+        } else {
+            context.literal = true;
+        }
+    }
+    
+    parseDayName(context: any) {
+        this.getName(context, 'D', this.getTranslation(TranslationKeys.DAY_NAMES_SHORT), this.getTranslation(TranslationKeys.DAY_NAMES));
+    }
+    
+    parseMonthName(context: any) {
+        this.getName(context, 'M', this.getTranslation(TranslationKeys.MONTH_NAMES_SHORT), this.getTranslation(TranslationKeys.MONTH_NAMES));
+    }
+    
+    setDateFromUnixTime(context: any) {
+        context.date = new Date(this.getNumber(context, '@'));
+        this.setDateFieldsFromDate(context);
+    }
+    
+    setDateFromTicks(context: any) {
+        context.date = new Date((this.getNumber(context, '!') - <number>this.ticksTo1970) / 10000);
+        this.setDateFieldsFromDate(context);
+    }
+    
+    
+    lookAhead(context: any, match: string): boolean {
+        const matches = context.iFormat + 1 < context.format.length && context.format.charAt(context.iFormat + 1) === match;
+        if (matches) {
+            context.iFormat++;
+        }
+        return matches;
+    }
+    
+    getNumber(context: any, match: string): number {
+        const isDoubled = this.lookAhead(context, match);
+        const size = this.getNumberSize(match, isDoubled);
+        const digits = new RegExp('^\\d{' + size.minSize + ',' + size.maxSize + '}');
+        const num = context.value.substring(context.iValue).match(digits);
+    
+        if (!num) {
+            throw new Error(`Missing number at position ${context.iValue}`);
+        }
+    
+        context.iValue += num[0].length;
+        return parseInt(num[0], 10);
+    }
+    
+    getNumberSize(match: string, isDoubled: boolean): any {
+        switch (match) {
+            case '@':
+                return { minSize: 14, maxSize: 14 };
+            case '!':
+                return { minSize: 20, maxSize: 20 };
+            case 'y':
+                return { minSize: isDoubled ? 4 : 1, maxSize: isDoubled ? 4 : 2 };
+            case 'o':
+                return { minSize: 1, maxSize: 3 };
+            default:
+                return { minSize: 1, maxSize: 2 };
+        }
+    }
+    
+    getName(context: any, match: string, shortNames: string[], longNames: string[]): number {
+        const arr = this.lookAhead(context, match) ? longNames : shortNames;
+        const names = this.sortNamesByLength(arr);
+    
+        for (const name of names) {
+            if (context.value.substr(context.iValue, name.length).toLowerCase() === name.toLowerCase()) {
+                context.iValue += name.length;
+                return name.index + 1;
+            }
+        }
+    
+        throw new Error(`Unknown name at position ${context.iValue}`);
+    }
+    
+    sortNamesByLength(names: string[]): any[] {
+        return names.map((name, index) => ({ name, index }))
+            .sort((a, b) => b.name.length - a.name.length);
+    }
+    
+    checkLiteral(context: any) {
+        if (context.value.charAt(context.iValue) !== context.format.charAt(context.iFormat)) {
+            throw new Error(`Unexpected literal at position ${context.iValue}`);
+        }
+        context.iValue++;
+    }
+    
+    
+    resolveDayOfYear(context: any) {
+        context.month = 1;
+        context.day = context.doy;
+    
+        while (true) {
+            const dim = this.getDaysCountInMonth(context.year, context.month - 1);
+            if (context.day <= dim) {
+                break;
+            }
+            context.month++;
+            context.day -= dim;
+        }
+    }
+    
+    setDateFieldsFromDate(context: any) {
+        context.year = context.date.getFullYear();
+        context.month = context.date.getMonth() + 1;
+        context.day = context.date.getDate();
+    }
+    
+    adjustForDaylightSaving(date: Date): Date {
+        return this.daylightSavingAdjust(date);
+    }
+       
     daylightSavingAdjust(date: any) {
         if (!date) {
             return null;
